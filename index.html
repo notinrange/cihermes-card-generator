@@ -888,7 +888,7 @@ async function sendEmail() {
     subject: cardType === 'birthday'
       ? `Happy Birthday ${document.getElementById('inp-name').value || ''}`
       : `Happy Work Anniversary ${document.getElementById('inp-name').value || ''}`,
-    imageBase64: canvas.toDataURL('image/jpeg', 0.7)
+    imageBase64: canvas.toDataURL('image/png')
   };
 
   try {
