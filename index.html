@@ -877,47 +877,37 @@ function resetAll() {
 // SEND EMAIL 
 async function sendEmail() {
   const canvas = document.getElementById('outCanvas');
+  if (!canvas.width) { toast('Please generate card first', true); return; }
 
-  if (!canvas.width) {
-    toast('Please generate card first', true);
-    return;
-  }
+  const toEmail = document.getElementById('toEmail').value;
+  if (!toEmail) { toast('Enter recipient email', true); return; }
 
   const payload = {
-    to: document.getElementById('toEmail').value,
+    to: toEmail,
     cc: document.getElementById('ccEmail').value,
     subject: cardType === 'birthday'
       ? `Happy Birthday ${document.getElementById('inp-name').value || ''}`
       : `Happy Work Anniversary ${document.getElementById('inp-name').value || ''}`,
-    
-    // 🔥 smaller + safer
     imageBase64: canvas.toDataURL('image/jpeg', 0.7)
   };
 
-  if (!payload.to) {
-    toast('Enter recipient email', true);
-    return;
-  }
-
   try {
-    const res = await fetch('https://script.google.com/macros/s/AKfycbxoQWZyc_qLv-pNgz4nNjqsbMKzpy3E22RBGI8zvlpkbrgshJzAOe70KPgz1lIBRf1x/exec', {
+    toast('Sending...');
+    const res = await fetch('https://script.google.com/macros/s/YOUR_ID_HERE/exec', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify(payload)
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'   // ← key fix
     });
 
     const data = await res.json();
-
     if (data.status === 'ok') {
       toast('Email sent successfully ✓');
     } else {
       toast(data.message || 'Error sending email', true);
     }
-
   } catch (err) {
-    toast('Failed to send email', true);
+    toast('Failed to send: ' + err.message, true);
   }
 }
 
