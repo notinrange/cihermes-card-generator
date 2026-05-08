@@ -361,8 +361,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     <div class="actions">
       <button class="btn btn-primary" onclick="generateCard()">✦ Generate Card</button>
       <button class="btn btn-dl" id="dlBtn" onclick="downloadCard()">⬇ Download PNG</button>
-      <button class="btn btn-send" id="sendBtn" onclick="handleSendOrSchedule()">✉ Send Email</button>
-      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+      <button class="btn btn-send" id="sendBtn" onclick="handleSendOrSchedule()" disabled style="opacity:0.4;cursor:not-allowed;">✉ Send Email</button>      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
     </div>
   </div>
 
@@ -586,6 +585,9 @@ function generateCard() {
   document.getElementById('outMeta').textContent = W + ' × ' + H + ' px — ready to download';
   document.getElementById('outputCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
   toast('Card generated ✓');
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('sendBtn').style.opacity = '';
+  document.getElementById('sendBtn').style.cursor = '';
 }
 
 function downloadCard() {
@@ -611,6 +613,9 @@ function toggleSched() {
   body.classList.toggle('open', on);
   var btn = document.getElementById('sendBtn');
   btn.textContent = on ? '🕐 Schedule Email' : '✉ Send Email';
+  document.getElementById('sendBtn').disabled = true;
+document.getElementById('sendBtn').style.opacity = '0.4';
+document.getElementById('sendBtn').style.cursor = 'not-allowed';
   if (on) setMinDate();
 }
 
