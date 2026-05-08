@@ -1,919 +1,242 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ciHERMES Card Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+// ══════════════════════════════════════════════════════════════════
+//  ciHERMES — Google Apps Script Backend
+//  Handles: immediate send, schedule, cancel, and auto-processing
+// ══════════════════════════════════════════════════════════════════
 
-:root {
-  --bg: #080c14;
-  --surface: #0f1520;
-  --surface2: #151d2e;
-  --border: #1e2d45;
-  --border2: #263348;
-  --accent: #2563eb;
-  --accent2: #fbbf24;
-  --accent3: #10b981;
-  --text: #e2eaf5;
-  --muted: #5a7090;
-  --danger: #ef4444;
-  --radius: 12px;
+// ── SHEET NAME ──
+var SHEET_NAME = 'ScheduledEmails';
+
+// ── GET (health check) ──
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ status: 'ok' }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-body {
-  font-family: 'Inter', sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 2rem 1rem 4rem;
-  background-image: radial-gradient(ellipse at 20% 0%, rgba(37,99,235,0.08) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 100%, rgba(251,191,36,0.05) 0%, transparent 50%);
-}
 
-.shell {
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-/* ── HEADER ── */
-.hdr {
-  display: flex; align-items: center; gap: 1rem;
-  margin-bottom: 2.5rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border);
-}
-.hdr-logo {
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, var(--accent), #1d4ed8);
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.3rem;
-  box-shadow: 0 4px 20px rgba(37,99,235,0.35);
-}
-.hdr h1 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-.hdr p { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
-
-/* ── CARD ── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-.card-title {
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 1rem;
-  display: flex; align-items: center; gap: 0.5rem;
-}
-.card-title::before {
-  content: '';
-  display: inline-block;
-  width: 3px; height: 12px;
-  background: var(--accent2);
-  border-radius: 2px;
-}
-
-/* ── DROPDOWN ── */
-.type-select {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-.type-btn {
-  padding: 1rem;
-  border-radius: 10px;
-  border: 2px solid var(--border2);
-  background: var(--surface2);
-  color: var(--muted);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-}
-.type-btn span { display: block; font-size: 1.6rem; margin-bottom: 0.3rem; }
-.type-btn:hover { border-color: var(--accent); color: var(--text); }
-.type-btn.active {
-  border-color: var(--accent2);
-  background: rgba(251,191,36,0.08);
-  color: var(--accent2);
-  box-shadow: 0 0 0 1px var(--accent2), inset 0 0 20px rgba(251,191,36,0.05);
-}
-
-/* ── UPLOAD ZONES ── */
-.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-@media(max-width:520px){ .upload-grid { grid-template-columns: 1fr; } }
-
-.uzone {
-  border: 2px dashed var(--border2);
-  border-radius: 10px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-  cursor: pointer;
-  position: relative;
-}
-.uzone:hover { border-color: var(--accent); }
-.uzone.filled { border: 2px solid var(--accent3); }
-.uzone-head {
-  padding: 0.45rem 0.8rem;
-  background: var(--surface2);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  font-size: 0.65rem; font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.uzone-head .dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--border2);
-  transition: background 0.3s;
-}
-.uzone.filled .dot { background: var(--accent3); }
-.uzone-body {
-  min-height: 90px;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 0.35rem; padding: 1rem;
-  text-align: center;
-  position: relative;
-}
-.uzone-body input[type="file"] {
-  position: absolute; inset: 0;
-  opacity: 0; cursor: pointer; z-index: 2;
-  width: 100%; height: 100%;
-}
-.uzone-icon { font-size: 1.6rem; }
-.uzone-hint { font-size: 0.72rem; color: var(--muted); line-height: 1.4; }
-.uzone-name { font-size: 0.7rem; color: var(--accent3); font-weight: 600; display: none; word-break: break-all; }
-.uzone-prev {
-  display: none;
-  border-top: 1px solid var(--border);
-  position: relative;
-}
-.uzone-prev img {
-  display: block; width: 100%;
-  height: 120px; object-fit: contain;
-  background: #060a10;
-}
-.change-btn {
-  position: absolute; top: 5px; right: 5px; z-index: 3;
-  background: rgba(8,12,20,0.9);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-size: 0.65rem; padding: 2px 7px;
-  border-radius: 5px; cursor: pointer;
-  font-family: 'Sora', sans-serif;
-}
-.change-btn:hover { background: var(--border2); }
-
-/* ── FIELDS ── */
-.fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-@media(max-width:520px){ .fields-grid { grid-template-columns: 1fr; } }
-
-.field { display: flex; flex-direction: column; gap: 0.35rem; }
-.field label {
-  font-size: 0.65rem; font-weight: 700;
-  color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.08em;
-}
-.field input, .field select {
-  background: var(--surface2);
-  border: 1.5px solid var(--border2);
-  border-radius: 8px;
-  padding: 0.55rem 0.8rem;
-  color: var(--text);
-  font-size: 0.9rem;
-  outline: none;
-  font-family: 'Sora', sans-serif;
-  transition: border-color 0.2s;
-}
-.field input:focus, .field select:focus { border-color: var(--accent); }
-.field input::placeholder { color: #2d3f58; }
-.field select option { background: var(--surface2); }
-
-/* ── ADVANCED SETTINGS ── */
-.adv-toggle {
-  display: flex; align-items: center; gap: 0.5rem;
-  font-size: 0.72rem; color: var(--muted);
-  cursor: pointer;
-  padding: 0.5rem 0;
-  user-select: none;
-  width: fit-content;
-}
-.adv-toggle:hover { color: var(--text); }
-.adv-toggle .arr { transition: transform 0.2s; }
-.adv-toggle.open .arr { transform: rotate(90deg); }
-
-.adv-body { display: none; padding-top: 0.75rem; }
-.adv-body.open { display: block; }
-
-.sliders-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 0.85rem; }
-
-.sl-item { display: flex; flex-direction: column; gap: 0.22rem; }
-.sl-item .sl-lbl {
-  font-size: 0.62rem; color: var(--muted);
-  display: flex; justify-content: space-between;
-  font-weight: 600;
-}
-.sl-item .sl-lbl .sv { color: var(--accent2); font-weight: 700; }
-.sl-item input[type="range"] { width: 100%; accent-color: var(--accent2); }
-.sl-item input[type="color"] {
-  width: 100%; height: 28px;
-  border: 1px solid var(--border2);
-  border-radius: 5px; cursor: pointer;
-  background: transparent; padding: 2px;
-}
-.sl-item select {
-  background: var(--surface2); border: 1px solid var(--border2);
-  border-radius: 5px; color: var(--text);
-  padding: 3px 6px; font-family: 'Sora', sans-serif;
-  font-size: 0.72rem; cursor: pointer; outline: none;
-}
-
-.adv-section-label {
-  font-size: 0.62rem; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.08em;
-  margin: 0.75rem 0 0.5rem;
-  display: flex; align-items: center; gap: 0.4rem;
-}
-.adv-section-label::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-/* ── LIVE PREVIEW ── */
-.live-wrap {
-  margin-top: 1rem;
-  background: #060a10;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.75rem;
-  display: none;
-  text-align: center;
-}
-.live-wrap canvas { max-width: 100%; border-radius: 6px; }
-.live-lbl { font-size: 0.6rem; color: #2d3f58; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 700; margin-bottom: 0.4rem; }
-
-/* ── ACTIONS ── */
-.actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-.btn {
-  padding: 0.6rem 1.4rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  transition: all 0.18s;
-  font-family: 'Sora', sans-serif;
-  letter-spacing: 0.01em;
-}
-.btn:active { transform: scale(0.97); }
-.btn-primary {
-  background: linear-gradient(135deg, var(--accent2), #f59e0b);
-  color: #0a0800;
-  box-shadow: 0 4px 16px rgba(251,191,36,0.3);
-}
-.btn-primary:hover { opacity: 0.9; box-shadow: 0 6px 22px rgba(251,191,36,0.4); }
-.btn-dl {
-  background: linear-gradient(135deg, var(--accent3), #059669);
-  color: #fff;
-  display: none;
-  box-shadow: 0 4px 16px rgba(16,185,129,0.3);
-}
-.btn-dl:hover { opacity: 0.9; }
-.btn-ghost {
-  background: var(--surface2);
-  color: var(--muted);
-  border: 1px solid var(--border2);
-  font-size: 0.76rem;
-}
-.btn-ghost:hover { color: var(--text); background: var(--border2); }
-
-/* ── OUTPUT ── */
-.output-card {
-  display: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.5rem;
-  text-align: center;
-}
-.output-card canvas { max-width: 100%; border-radius: 8px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); }
-.out-meta { margin-top: 0.65rem; font-size: 0.72rem; color: var(--muted); }
-
-/* ── TOAST ── */
-.toast {
-  position: fixed; bottom: 1.5rem; left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: var(--accent3); color: #fff;
-  padding: 0.5rem 1.2rem;
-  border-radius: 8px; font-size: 0.78rem; font-weight: 700;
-  transition: transform 0.3s; z-index: 999;
-  pointer-events: none; white-space: nowrap;
-  font-family: 'Sora', sans-serif;
-}
-.toast.show { transform: translateX(-50%) translateY(0); }
-.toast.err { background: var(--danger); }
-
-/* ── DIVIDER ── */
-hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
-</style>
-</head>
-<body>
-<div class="shell">
-
-  <!-- HEADER -->
-  <div class="hdr">
-    <div class="hdr-logo">🎗️</div>
-    <div>
-      <h1>ciHERMES Card Generator</h1>
-      <p>Birthday & Work Anniversary cards — upload template, fill details, download.</p>
-    </div>
-  </div>
-
-  <!-- STEP 1: CARD TYPE -->
-  <div class="card">
-    <div class="card-title">① Select Card Type</div>
-    <div class="type-select">
-      <button class="type-btn active" id="btn-birthday" onclick="setType('birthday')">
-        <span>🎂</span>Birthday Card
-      </button>
-      <button class="type-btn" id="btn-anniversary" onclick="setType('anniversary')">
-        <span>🏆</span>Work Anniversary
-      </button>
-    </div>
-  </div>
-
-  <!-- STEP 2: UPLOAD TEMPLATE + PHOTO -->
-  <div class="card">
-    <div class="card-title">② Upload Images</div>
-    <div class="upload-grid">
-      <div class="uzone" id="tplZone">
-        <div class="uzone-head"><span>📄 Template</span><span class="dot"></span></div>
-        <div class="uzone-body">
-          <input type="file" id="tplFile" accept="image/*">
-          <div class="uzone-icon" id="tplIcon">🖼️</div>
-          <div class="uzone-hint" id="tplHint">Click to upload template image</div>
-          <div class="uzone-name" id="tplName"></div>
-        </div>
-        <div class="uzone-prev" id="tplPrev">
-          <img id="tplPrevImg" src="" alt="">
-          <button class="change-btn" onclick="document.getElementById('tplFile').click()">↺ Change</button>
-        </div>
-      </div>
-      <div class="uzone" id="photoZone">
-        <div class="uzone-head"><span>👤 Person's Photo</span><span class="dot"></span></div>
-        <div class="uzone-body">
-          <input type="file" id="photoFile" accept="image/*">
-          <div class="uzone-icon" id="photoIcon">📷</div>
-          <div class="uzone-hint" id="photoHint">Click to upload person's photo</div>
-          <div class="uzone-name" id="photoName"></div>
-        </div>
-        <div class="uzone-prev" id="photoPrev">
-          <img id="photoPrevImg" src="" alt="">
-          <button class="change-btn" onclick="document.getElementById('photoFile').click()">↺ Change</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 3: DETAILS -->
-  <div class="card">
-    <div class="card-title" id="detailsTitle">③ Birthday Details</div>
-    <div class="fields-grid" id="fieldsGrid">
-      <!-- Birthday fields -->
-      <div class="field" id="fld-name">
-        <label>Full Name</label>
-        <input type="text" id="inp-name" placeholder="e.g. Rahul Kumar" oninput="schedLive()">
-      </div>
-      <div class="field" id="fld-dob">
-        <label>Date of Birth</label>
-        <input type="text" id="inp-dob" placeholder="e.g. 15 March 1990" oninput="schedLive()">
-      </div>
-      <!-- Anniversary-only (hidden by default) -->
-      <div class="field" id="fld-years" style="display:none">
-        <label>Years Completed</label>
-        <input type="number" id="inp-years" placeholder="e.g. 5" min="1" max="50" oninput="schedLive()">
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP 4: POSITION FINE-TUNING -->
-  <div class="card">
-    <div class="card-title">④ Position Fine-Tuning</div>
-
-    <!-- LIVE PREVIEW -->
-    <div class="live-wrap" id="liveWrap">
-      <div class="live-lbl">Live Preview</div>
-      <canvas id="liveCanvas"></canvas>
-    </div>
-
-    <!-- Advanced Controls Toggle -->
-    <div class="adv-toggle" id="advToggle" onclick="toggleAdv()">
-      <span class="arr">▶</span> Advanced position controls
-    </div>
-    <div class="adv-body" id="advBody">
-
-      <!-- PHOTO FRAME -->
-      <div class="adv-section-label" style="color:#58a6ff;">📷 Photo Frame</div>
-      <div class="sliders-grid">
-        <div class="sl-item">
-          <div class="sl-lbl">X <span class="sv" id="v-px">0</span>px</div>
-          <input type="range" id="sl-px" min="0" max="1400" value="0" oninput="sv('v-px',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Y <span class="sv" id="v-py">0</span>px</div>
-          <input type="range" id="sl-py" min="0" max="1000" value="0" oninput="sv('v-py',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Width <span class="sv" id="v-pw">300</span>px</div>
-          <input type="range" id="sl-pw" min="50" max="1400" value="300" oninput="sv('v-pw',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Height <span class="sv" id="v-ph">300</span>px</div>
-          <input type="range" id="sl-ph" min="50" max="1000" value="300" oninput="sv('v-ph',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Corner Radius <span class="sv" id="v-pr">0</span>px</div>
-          <input type="range" id="sl-pr" min="0" max="300" value="0" oninput="sv('v-pr',this.value);schedLive()">
-        </div>
-      </div>
-
-      <!-- NAME TEXT -->
-      <div class="adv-section-label" style="color:#3fb950;">✏️ Name Text</div>
-      <div class="sliders-grid">
-        <div class="sl-item">
-          <div class="sl-lbl">X <span class="sv" id="v-nx">0</span>px</div>
-          <input type="range" id="sl-nx" min="0" max="1400" value="0" oninput="sv('v-nx',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Y <span class="sv" id="v-ny">0</span>px</div>
-          <input type="range" id="sl-ny" min="0" max="1000" value="0" oninput="sv('v-ny',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Font Size <span class="sv" id="v-ns">32</span>px</div>
-          <input type="range" id="sl-ns" min="10" max="120" value="32" oninput="sv('v-ns',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Color</div>
-          <input type="color" id="nameColor" value="#ffffff" oninput="schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Style</div>
-          <select id="nameStyle" onchange="schedLive()">
-            <option value="800">ExtraBold</option>
-            <option value="700">Bold</option>
-            <option value="600">SemiBold</option>
-            <option value="400">Regular</option>
-          </select>
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Align</div>
-          <select id="nameAlign" onchange="schedLive()">
-            <option value="center">Center</option>
-            <option value="left">Left</option>
-            <option value="right">Right</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- DOB TEXT (Birthday only) -->
-      <div class="adv-section-label" id="dobSection" style="color:#f85149;">📅 Date of Birth</div>
-      <div class="sliders-grid" id="dobSliders">
-        <div class="sl-item">
-          <div class="sl-lbl">X <span class="sv" id="v-dx">0</span>px</div>
-          <input type="range" id="sl-dx" min="0" max="1400" value="0" oninput="sv('v-dx',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Y <span class="sv" id="v-dy">0</span>px</div>
-          <input type="range" id="sl-dy" min="0" max="1000" value="0" oninput="sv('v-dy',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Font Size <span class="sv" id="v-ds">26</span>px</div>
-          <input type="range" id="sl-ds" min="10" max="100" value="26" oninput="sv('v-ds',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Color</div>
-          <input type="color" id="dobColor" value="#fbbf24" oninput="schedLive()">
-        </div>
-      </div>
-
-      <!-- YEARS TEXT (Anniversary only) -->
-      <div class="adv-section-label" id="yearsSection" style="color:#fbbf24;display:none;">🔢 Years Number</div>
-      <div class="sliders-grid" id="yearsSliders" style="display:none">
-        <div class="sl-item">
-          <div class="sl-lbl">X <span class="sv" id="v-yx">0</span>px</div>
-          <input type="range" id="sl-yx" min="0" max="1400" value="0" oninput="sv('v-yx',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Y <span class="sv" id="v-yy">0</span>px</div>
-          <input type="range" id="sl-yy" min="0" max="1000" value="0" oninput="sv('v-yy',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Font Size <span class="sv" id="v-ys">80</span>px</div>
-          <input type="range" id="sl-ys" min="20" max="200" value="80" oninput="sv('v-ys',this.value);schedLive()">
-        </div>
-        <div class="sl-item">
-          <div class="sl-lbl">Color</div>
-          <input type="color" id="yearsColor" value="#fbbf24" oninput="schedLive()">
-        </div>
-      </div>
-
-    </div><!-- /adv-body -->
-  </div>
-
-  <!-- STEP 5: GENERATE -->
-  <div class="card">
-    <div class="card-title">⑤ Generate, Download and Email</div>
-    <div class="fields-grid">
-    
-    <div class="field">
-      <label>To Email</label>
-      <input type="email" id="toEmail" placeholder="recipient@example.com">
-    </div>
-
-    <div class="field">
-      <label>CC Email (optional)</label>
-      <input type="email" id="ccEmail" placeholder="cc@example.com">
-    </div>
-
-  </div>
-    <div class="actions">
-      <button class="btn btn-primary" onclick="generateCard()">✦ Generate Card</button>
-      <button class="btn btn-dl" id="dlBtn" onclick="downloadCard()">⬇ Download PNG</button>
-      <button class="btn btn-primary" onclick="sendEmail()">Send Email</button>
-      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
-    </div>
-  </div>
-
-  <!-- OUTPUT -->
-  <div class="output-card" id="outputCard">
-    <div class="card-title" style="justify-content:center;margin-bottom:1rem;">✓ Generated Card</div>
-    <canvas id="outCanvas"></canvas>
-    <div class="out-meta" id="outMeta"></div>
-  </div>
-
-</div><!-- /shell -->
-
-<div class="toast" id="toast"></div>
-
-<script>
-// ── STATE ──
-var cardType = 'birthday';
-var tplImg = null, photoImg = null;
-var liveTimer = null;
-
-// Default positions per card type (for actual template dimensions)
-// Birthday template: ~1365 × 910 — photo goes on RIGHT side (clear area)
-// Anniversary template: ~1050 × 1050 — photo goes on LEFT side (clear area)
-var DEFAULTS = {
-  birthday: {
-    px: 818, py: 224, pw: 453, ph: 560, pr: 20,
-    nx: 1060, ny: 837, ns: 38, nalign: 'center',
-    dx: 1047, dy: 875, ds: 28,
-    yx: 0, yy: 0, ys: 80
-  },
-  anniversary: {
-    px: 88, py: 436, pw: 480, ph: 480, pr: 10,
-    nx: 793, ny: 502, ns: 52, nalign: 'left',
-    dx: 952, dy: 852, ds: 177,
-    yx: 952, yy: 852, ys: 177
-  }
-};
-
-// ── HELPERS ──
-function toast(msg, isErr) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast' + (isErr ? ' err' : '');
-  void t.offsetWidth; t.classList.add('show');
-  setTimeout(function(){ t.classList.remove('show'); }, 2600);
-}
-function sv(id, val) { document.getElementById(id).textContent = val; }
-function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
-function readFile(file, cb) {
-  var r = new FileReader();
-  r.onload = function(e) {
-    var img = new Image();
-    img.onload = function() { cb(null, img); };
-    img.onerror = function() { cb(new Error('fail')); };
-    img.src = e.target.result;
-  };
-  r.onerror = function() { cb(new Error('fail')); };
-  r.readAsDataURL(file);
-}
-function setSlider(id, val) {
-  var el = document.getElementById(id);
-  if (el) { el.value = val; }
-}
-function updateSvFromSlider(sId, vId) {
-  var el = document.getElementById(sId);
-  if (el) sv(vId, el.value);
-}
-
-// ── CARD TYPE SWITCH ──
-function setType(t) {
-  cardType = t;
-  document.getElementById('btn-birthday').className   = 'type-btn' + (t==='birthday'?' active':'');
-  document.getElementById('btn-anniversary').className = 'type-btn' + (t==='anniversary'?' active':'');
-
-  // Toggle fields
-  document.getElementById('fld-dob').style.display    = t==='birthday' ? '' : 'none';
-  document.getElementById('fld-years').style.display  = t==='anniversary' ? '' : 'none';
-
-  // Toggle sliders
-  document.getElementById('dobSection').style.display   = t==='birthday' ? '' : 'none';
-  document.getElementById('dobSliders').style.display   = t==='birthday' ? '' : 'none';
-  document.getElementById('yearsSection').style.display = t==='anniversary' ? '' : 'none';
-  document.getElementById('yearsSliders').style.display = t==='anniversary' ? '' : 'none';
-
-  // Update label
-  document.getElementById('detailsTitle').textContent = t==='birthday' ? '③ Birthday Details' : '③ Anniversary Details';
-
-  applyDefaults();
-  schedLive();
-}
-
-function applyDefaults() {
-  var d = DEFAULTS[cardType];
-  // photo
-  setSlider('sl-px', d.px); sv('v-px', d.px);
-  setSlider('sl-py', d.py); sv('v-py', d.py);
-  setSlider('sl-pw', d.pw); sv('v-pw', d.pw);
-  setSlider('sl-ph', d.ph); sv('v-ph', d.ph);
-  setSlider('sl-pr', d.pr); sv('v-pr', d.pr);
-  // name
-  setSlider('sl-nx', d.nx); sv('v-nx', d.nx);
-  setSlider('sl-ny', d.ny); sv('v-ny', d.ny);
-  setSlider('sl-ns', d.ns); sv('v-ns', d.ns);
-  document.getElementById('nameAlign').value = d.nalign;
-  // dob
-  setSlider('sl-dx', d.dx); sv('v-dx', d.dx);
-  setSlider('sl-dy', d.dy); sv('v-dy', d.dy);
-  setSlider('sl-ds', d.ds); sv('v-ds', d.ds);
-  // years
-  setSlider('sl-yx', d.yx); sv('v-yx', d.yx);
-  setSlider('sl-yy', d.yy); sv('v-yy', d.yy);
-  setSlider('sl-ys', d.ys); sv('v-ys', d.ys);
-}
-
-// ── UPLOADS ──
-document.getElementById('tplFile').addEventListener('change', function() {
-  var file = this.files[0]; if (!file) return;
-  readFile(file, function(err, img) {
-    if (err) { toast('Failed to load template', true); return; }
-    tplImg = img;
-    document.getElementById('tplPrevImg').src = img.src;
-    document.getElementById('tplPrev').style.display = 'block';
-    document.getElementById('tplIcon').textContent = '✅';
-    document.getElementById('tplHint').style.display = 'none';
-    var fn = document.getElementById('tplName'); fn.textContent = '✓ ' + file.name; fn.style.display = 'block';
-    document.getElementById('tplZone').classList.add('filled');
-    // Adjust slider maxes to actual image dims
-    updateSliderMaxes(img.naturalWidth, img.naturalHeight);
-    schedLive();
-    toast('Template loaded ✓');
-  });
-});
-
-document.getElementById('photoFile').addEventListener('change', function() {
-  var file = this.files[0]; if (!file) return;
-  readFile(file, function(err, img) {
-    if (err) { toast('Failed to load photo', true); return; }
-    photoImg = img;
-    document.getElementById('photoPrevImg').src = img.src;
-    document.getElementById('photoPrev').style.display = 'block';
-    document.getElementById('photoIcon').textContent = '✅';
-    document.getElementById('photoHint').style.display = 'none';
-    var fn = document.getElementById('photoName'); fn.textContent = '✓ ' + file.name; fn.style.display = 'block';
-    document.getElementById('photoZone').classList.add('filled');
-    schedLive();
-    toast('Photo loaded ✓');
-  });
-});
-
-function updateSliderMaxes(W, H) {
-  ['sl-px','sl-nx','sl-dx','sl-yx'].forEach(function(id){ var e=document.getElementById(id); if(e) e.max=W; });
-  ['sl-py','sl-ny','sl-dy','sl-yy'].forEach(function(id){ var e=document.getElementById(id); if(e) e.max=H; });
-  ['sl-pw'].forEach(function(id){ var e=document.getElementById(id); if(e) e.max=W; });
-  ['sl-ph'].forEach(function(id){ var e=document.getElementById(id); if(e) e.max=H; });
-}
-
-// ── LIVE PREVIEW ──
-function schedLive() {
-  clearTimeout(liveTimer);
-  liveTimer = setTimeout(renderLive, 120);
-}
-
-function renderLive() {
-  if (!tplImg) return;
-  var wrap = document.getElementById('liveWrap');
-  wrap.style.display = 'block';
-  var lc = document.getElementById('liveCanvas');
-  var maxW = wrap.clientWidth - 24;
-  var scale = Math.min(1, maxW / tplImg.naturalWidth);
-  var W = Math.round(tplImg.naturalWidth * scale);
-  var H = Math.round(tplImg.naturalHeight * scale);
-  lc.width = W; lc.height = H;
-  renderToCtx(lc.getContext('2d'), W, H, scale);
-}
-
-// ── CORE RENDER ──
-function renderToCtx(ctx, W, H, scale) {
-  ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(tplImg, 0, 0, W, H);
-
-  // ── Photo ──
-  if (photoImg) {
-    var px=gv('sl-px')*scale, py=gv('sl-py')*scale;
-    var pw=gv('sl-pw')*scale, ph=gv('sl-ph')*scale;
-    var pr=gv('sl-pr')*scale;
-    ctx.save();
-    ctx.beginPath();
-    roundRect(ctx, px, py, pw, ph, pr);
-    ctx.clip();
-    var par=photoImg.naturalWidth/photoImg.naturalHeight, far=pw/ph;
-    var dw,dh,dx,dy;
-    if(par>far){dh=ph;dw=dh*par;dx=px-(dw-pw)/2;dy=py;}
-    else{dw=pw;dh=dw/par;dx=px;dy=py-(dh-ph)/2;}
-    ctx.drawImage(photoImg, dx, dy, dw, dh);
-    ctx.restore();
-  }
-
-  var name  = (document.getElementById('inp-name').value || '').trim();
-  var dob   = (document.getElementById('inp-dob').value  || '').trim();
-  var years = (document.getElementById('inp-years').value|| '').trim();
-
-  var nc    = document.getElementById('nameColor').value;
-  var dc    = document.getElementById('dobColor').value;
-  var yc    = document.getElementById('yearsColor').value;
-  var nalign = document.getElementById('nameAlign').value;
-  var nstyle = gv('sl-ns');
-  var nw     = gv('sl-ns')*scale;
-
-  // ── Name ──
-  if (name) {
-    var nx=gv('sl-nx')*scale, ny=gv('sl-ny')*scale, ns=gv('sl-ns')*scale;
-    var nwt = gv('sl-ns'); // weight
-    ctx.save();
-    ctx.textAlign = nalign;
-    ctx.font = document.getElementById('nameStyle').value + ' ' + ns + 'px Sora, sans-serif';
-    // transparent bg + shadow only
-    ctx.shadowColor = 'rgba(0,0,0,0.55)';
-    ctx.shadowBlur = 6*scale;
-    ctx.shadowOffsetX = 1*scale; ctx.shadowOffsetY = 1*scale;
-    ctx.fillStyle = nc;
-    ctx.fillText(name, nx, ny);
-    ctx.restore();
-  }
-
-  // ── DOB (birthday) ──
-  if (cardType === 'birthday' && dob) {
-    var dx2=gv('sl-dx')*scale, dy2=gv('sl-dy')*scale, ds=gv('sl-ds')*scale;
-    ctx.save();
-    ctx.textAlign = nalign;
-    ctx.font = '600 ' + ds + 'px Sora, sans-serif';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 5*scale;
-    ctx.fillStyle = dc;
-    ctx.fillText(dob, dx2, dy2);
-    ctx.restore();
-  }
-
-  // ── Years (anniversary) ──
-  if (cardType === 'anniversary' && years) {
-    var yx=gv('sl-yx')*scale, yy=gv('sl-yy')*scale, ys=gv('sl-ys')*scale;
-    ctx.save();
-    ctx.textAlign = 'center';
-    ctx.font = '800 ' + ys + 'px Sora, sans-serif';
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 8*scale;
-    ctx.fillStyle = yc;
-    ctx.fillText(years, yx, yy);
-    ctx.restore();
-  }
-}
-
-// Rounded rect path helper
-function roundRect(ctx, x, y, w, h, r) {
-  r = Math.min(r, w/2, h/2);
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y,     x + w, y + r,     r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x,     y + h, x,     y + h - r, r);
-  ctx.lineTo(x,     y + r);
-  ctx.arcTo(x,     y,     x + r, y,         r);
-  ctx.closePath();
-}
-
-// ── GENERATE ──
-function generateCard() {
-  if (!tplImg) { toast('Upload a template first', true); return; }
-  var out = document.getElementById('outCanvas');
-  var ctx = out.getContext('2d');
-  var W = tplImg.naturalWidth, H = tplImg.naturalHeight;
-  out.width = W; out.height = H;
-  renderToCtx(ctx, W, H, 1);
-  document.getElementById('outputCard').style.display = 'block';
-  document.getElementById('dlBtn').style.display = 'inline-block';
-  document.getElementById('outMeta').textContent = W + ' × ' + H + ' px — ready to download';
-  document.getElementById('outputCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
-  toast('Card generated! ✓');
-}
-
-function downloadCard() {
-  var cv = document.getElementById('outCanvas');
-  var name = (document.getElementById('inp-name').value || (cardType==='birthday'?'birthday':'anniversary')) + '_card.png';
-  var fn = name.replace(/\s+/g, '_');
-  var a = document.createElement('a');
-  a.download = fn; a.href = cv.toDataURL('image/png');
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  toast('Downloading ' + fn);
-}
-
-// ── ADVANCED TOGGLE ──
-function toggleAdv() {
-  var tgl = document.getElementById('advToggle');
-  var body = document.getElementById('advBody');
-  var open = body.classList.toggle('open');
-  tgl.classList.toggle('open', open);
-}
-
-// ── RESET ──
-function resetAll() {
-  tplImg = null; photoImg = null;
-  ['tplFile','photoFile'].forEach(function(id){ document.getElementById(id).value=''; });
-  ['tplZone','photoZone'].forEach(function(id){ document.getElementById(id).classList.remove('filled'); });
-  ['tplPrev','photoPrev'].forEach(function(id){ document.getElementById(id).style.display='none'; });
-  document.getElementById('tplIcon').textContent='🖼️'; document.getElementById('tplHint').style.display='';
-  document.getElementById('photoIcon').textContent='📷'; document.getElementById('photoHint').style.display='';
-  document.getElementById('tplName').style.display='none'; document.getElementById('photoName').style.display='none';
-  document.getElementById('inp-name').value='';
-  document.getElementById('inp-dob').value='';
-  document.getElementById('inp-years').value='';
-  document.getElementById('outputCard').style.display='none';
-  document.getElementById('dlBtn').style.display='none';
-  document.getElementById('liveWrap').style.display='none';
-  toast('Reset ✓');
-}
-
-// SEND EMAIL 
-async function sendEmail() {
-  const canvas = document.getElementById('outCanvas');
-  if (!canvas.width) { toast('Please generate card first', true); return; }
-
-  const toEmail = document.getElementById('toEmail').value;
-  if (!toEmail) { toast('Enter recipient email', true); return; }
-
-  const payload = {
-    to: toEmail,
-    cc: document.getElementById('ccEmail').value,
-    subject: cardType === 'birthday'
-      ? `Happy Birthday ${document.getElementById('inp-name').value || ''}`
-      : `Happy Work Anniversary ${document.getElementById('inp-name').value || ''}`,
-    imageBase64: canvas.toDataURL('image/png')
-  };
-
+// ── POST ROUTER ──
+function doPost(e) {
   try {
-    toast('Sending...');
-    const res = await fetch('https://script.google.com/macros/s/AKfycbxoQWZyc_qLv-pNgz4nNjqsbMKzpy3E22RBGI8zvlpkbrgshJzAOe70KPgz1lIBRf1x/exec', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow'   // ← key fix
-    });
-
-    const data = await res.json();
-    if (data.status === 'ok') {
-      toast('Email sent successfully ✓');
-    } else {
-      toast(data.message || 'Error sending email', true);
+    if (!e || !e.postData || !e.postData.contents) {
+      throw new Error('No data received');
     }
+
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action || 'send';
+
+    if (action === 'send')     return handleSend(data);
+    if (action === 'schedule') return handleSchedule(data);
+    if (action === 'cancel')   return handleCancel(data);
+
+    throw new Error('Unknown action: ' + action);
+
   } catch (err) {
-    toast('Failed to send: ' + err.message, true);
+    return jsonResponse({ status: 'error', message: err.message });
   }
 }
 
 
-// ── INIT ──
-applyDefaults();
-</script>
-</body>
-</html>
+// ══════════════════════════════════════════════════════════════════
+//  IMMEDIATE SEND
+// ══════════════════════════════════════════════════════════════════
+function handleSend(data) {
+  sendCardEmail(data.to, data.cc, data.subject, data.imageBase64);
+  return jsonResponse({ status: 'ok' });
+}
+
+function sendCardEmail(to, cc, subject, imageBase64) {
+  // Support comma-separated multiple recipients
+  var toList = to.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+
+  var base64 = imageBase64.split(',')[1];
+  var blob = Utilities.newBlob(
+    Utilities.base64Decode(base64),
+    'image/png',
+    'card.png'
+  );
+
+  var mailOptions = {
+    htmlBody: '<div style="text-align:center;font-family:sans-serif;">' +
+              '<img src="cid:card" style="max-width:100%;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.25);">' +
+              '<p style="color:#888;font-size:12px;margin-top:16px;">Sent via ciHERMES</p>' +
+              '</div>',
+    inlineImages: { card: blob },
+    name: 'ciHERMES'
+  };
+
+  if (cc && cc.trim() !== '') {
+    mailOptions.cc = cc;
+  }
+
+  // Send to each recipient individually (or use first and BCC the rest)
+  GmailApp.sendEmail(toList[0], subject, 'Your email client does not support HTML.', mailOptions);
+
+  // If there are additional recipients, send to them too
+  for (var i = 1; i < toList.length; i++) {
+    GmailApp.sendEmail(toList[i], subject, 'Your email client does not support HTML.', mailOptions);
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  SCHEDULE
+// ══════════════════════════════════════════════════════════════════
+function handleSchedule(data) {
+  var sheet = getOrCreateSheet();
+
+  var id = Utilities.getUuid();
+  var scheduleAt = new Date(data.scheduleAt);   // ISO string from client
+  var now = new Date();
+
+  if (scheduleAt <= now) {
+    throw new Error('Scheduled time is in the past');
+  }
+
+  // Store the row
+  // Columns: ID | To | CC | Subject | ImageBase64 | ScheduleAt | Timezone | Status | CreatedAt
+  sheet.appendRow([
+    id,
+    data.to    || '',
+    data.cc    || '',
+    data.subject || '',
+    data.imageBase64 || '',
+    scheduleAt.toISOString(),
+    data.timezone || 'UTC',
+    'pending',
+    now.toISOString()
+  ]);
+
+  // Ensure the time-driven trigger exists
+  ensureTrigger();
+
+  return jsonResponse({ status: 'ok', id: id });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  CANCEL
+// ══════════════════════════════════════════════════════════════════
+function handleCancel(data) {
+  var sheet = getOrCreateSheet();
+  var rows = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < rows.length; i++) {     // skip header row
+    if (rows[i][0] === data.id) {
+      sheet.getRange(i + 1, 8).setValue('cancelled');
+      return jsonResponse({ status: 'ok', id: data.id });
+    }
+  }
+
+  return jsonResponse({ status: 'cancelled', message: 'ID not found (may already be sent)' });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  PROCESS PENDING — called by time trigger every minute
+// ══════════════════════════════════════════════════════════════════
+function processPendingEmails() {
+  var sheet = getOrCreateSheet();
+  var data  = sheet.getDataRange().getValues();
+  var now   = new Date();
+  var sent  = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    var id         = row[0];
+    var to         = row[1];
+    var cc         = row[2];
+    var subject    = row[3];
+    var imageB64   = row[4];
+    var scheduleAt = new Date(row[5]);
+    var status     = row[7];
+
+    if (status !== 'pending') continue;
+    if (scheduleAt > now)     continue;
+
+    try {
+      sendCardEmail(to, cc, subject, imageB64);
+      sheet.getRange(i + 1, 8).setValue('sent');
+      sheet.getRange(i + 1, 9).setValue(now.toISOString());  // sent timestamp
+      sent++;
+    } catch (err) {
+      sheet.getRange(i + 1, 8).setValue('error: ' + err.message);
+    }
+  }
+
+  if (sent > 0) {
+    Logger.log('processPendingEmails: sent ' + sent + ' email(s)');
+  }
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════════
+
+function getOrCreateSheet() {
+  var ss    = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    // Header row
+    sheet.appendRow(['ID', 'To', 'CC', 'Subject', 'ImageBase64', 'ScheduleAt', 'Timezone', 'Status', 'CreatedAt']);
+    sheet.setFrozenRows(1);
+
+    // Hide the large ImageBase64 column (column E = index 5)
+    sheet.hideColumns(5);
+
+    // Format
+    sheet.getRange('1:1').setFontWeight('bold');
+    sheet.setColumnWidth(1, 250);  // ID
+    sheet.setColumnWidth(2, 200);  // To
+    sheet.setColumnWidth(4, 300);  // Subject
+    sheet.setColumnWidth(6, 200);  // ScheduleAt
+    sheet.setColumnWidth(8, 100);  // Status
+  }
+
+  return sheet;
+}
+
+function ensureTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'processPendingEmails') {
+      return; // already exists
+    }
+  }
+  // Create a 1-minute trigger
+  ScriptApp.newTrigger('processPendingEmails')
+    .timeBased()
+    .everyMinutes(1)
+    .create();
+}
+
+function jsonResponse(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+//  MANUAL TEST HELPERS (run from the Apps Script editor)
+// ══════════════════════════════════════════════════════════════════
+
+function testImmediateEmail() {
+  var blob = Utilities.newBlob('Test', 'text/plain', 'test.txt');
+  GmailApp.sendEmail(
+    'rahulkumarpoddar0703@gmail.com',
+    'Test — ciHERMES',
+    'HTML test',
+    {
+      htmlBody: '<h3>ciHERMES test ✅</h3><p>Gmail is working.</p>',
+      attachments: [blob],
+      name: 'ciHERMES'
+    }
+  );
+}
+
+function testProcessTrigger() {
+  processPendingEmails();
+}
