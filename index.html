@@ -394,7 +394,7 @@ var tplImg = null, photoImg = null;
 var liveTimer = null;
 
 // Scheduled items stored locally
-var scheduledQueue = JSON.parse(localStorage.getItem('cihermes_queue') || '[]');
+var scheduledQueue = [];
 
 var DEFAULTS = {
   birthday:    { px:804,  py:229, pw:406, ph:452, pr:0, nx:1006, ny:742, ns:38, nalign:'center', dx:1014, dy:780, ds:28, yx:0, yy:0, ys:80 },
@@ -735,20 +735,8 @@ async function scheduleEmail() {
     });
     var data = await res.json();
     if (data.status === 'ok') {
-      // Save to local queue for display
-      var item = {
-        id: data.id || Date.now().toString(),
-        to: toEmails.join(', '),
-        cc: ccEmails.join(', '),
-        subject: payload.subject,
-        scheduleAt: sendAt.toISOString(),
-        timezone: tz,
-        cardType: cardType
-      };
-      scheduledQueue.push(item);
-      localStorage.setItem('cihermes_queue', JSON.stringify(scheduledQueue));
-      renderQueue();
       toast('Scheduled ✓');
+      await loadQueueFromSheet();
     } else {
       toast(data.message || 'Scheduling failed', true);
     }
@@ -758,13 +746,23 @@ async function scheduleEmail() {
 }
 
 function buildPayload() {
+  var canvas = document.getElementById('outCanvas');
+  var maxW = 1200;
+  var scale = Math.min(1, maxW / canvas.width);
+  var tempCanvas = document.createElement('canvas');
+  tempCanvas.width  = Math.round(canvas.width  * scale);
+  tempCanvas.height = Math.round(canvas.height * scale);
+  var ctx = tempCanvas.getContext('2d');
+  ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
+  var compressed = tempCanvas.toDataURL('image/jpeg', 0.82);
+
   return {
     to:          toEmails.join(','),
     cc:          ccEmails.join(','),
     subject:     cardType === 'birthday'
                    ? 'Happy Birthday ' + (document.getElementById('inp-name').value || '')
                    : 'Happy Work Anniversary ' + (document.getElementById('inp-name').value || ''),
-    imageBase64: document.getElementById('outCanvas').toDataURL('image/png'),
+    imageBase64: compressed,
     action:      'send'
   };
 }
@@ -774,15 +772,11 @@ function renderQueue() {
   var qc = document.getElementById('queueCard');
   var list = document.getElementById('queueList');
   var countEl = document.getElementById('queueCount');
-  if (!scheduledQueue.length) {
-    qc.style.display = 'none';
-    list.innerHTML = '<div class="queue-empty">No scheduled emails yet.</div>';
-    return;
-  }
+  if (!scheduledQueue.length) { qc.style.display = 'none'; return; }
   qc.style.display = 'block';
   countEl.textContent = scheduledQueue.length + ' pending';
   list.innerHTML = '';
-  scheduledQueue.forEach(function(item, idx) {
+  scheduledQueue.forEach(function(item) {
     var d = new Date(item.scheduleAt);
     var opts = { weekday:'short', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZone: item.timezone || 'UTC' };
     var formatted = d.toLocaleString('en-IN', opts);
@@ -792,11 +786,29 @@ function renderQueue() {
       '<div class="queue-dot"></div>' +
       '<div class="queue-meta">' +
         '<div class="queue-to">' + escHtml(item.to) + '</div>' +
-        '<div class="queue-when">' + escHtml(item.subject) + ' · ' + formatted + ' (' + (item.timezone||'UTC') + ')</div>' +
+        '<div class="queue-when">' + escHtml(item.subject) + ' · ' + formatted + ' (' + escHtml(item.timezone||'UTC') + ')</div>' +
       '</div>' +
-      '<button class="queue-cancel" onclick="cancelScheduled(\'' + item.id + '\')">Cancel</button>';
+      '<button class="queue-cancel" onclick="cancelScheduled(\'' + escHtml(item.id) + '\')">Cancel</button>';
     list.appendChild(div);
   });
+}
+
+async function loadQueueFromSheet() {
+  try {
+    var res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'getQueue' }),
+      redirect: 'follow'
+    });
+    var data = await res.json();
+    if (data.status === 'ok') {
+      scheduledQueue = data.queue || [];
+      renderQueue();
+    }
+  } catch(err) {
+    console.error('Failed to load queue:', err);
+  }
 }
 
 async function cancelScheduled(id) {
@@ -809,21 +821,11 @@ async function cancelScheduled(id) {
       redirect: 'follow'
     });
     var data = await res.json();
-    if (data.status === 'ok' || data.status === 'cancelled') {
-      scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
-      localStorage.setItem('cihermes_queue', JSON.stringify(scheduledQueue));
-      renderQueue();
-      toast('Cancelled ✓');
-    } else {
-      toast(data.message || 'Cancel failed', true);
-    }
+    toast('Cancelled ✓');
   } catch(err) {
-    // Remove locally even if server fails
-    scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
-    localStorage.setItem('cihermes_queue', JSON.stringify(scheduledQueue));
-    renderQueue();
-    toast('Removed from queue');
+    toast('Cancel failed: ' + err.message, true);
   }
+  await loadQueueFromSheet();
 }
 
 function escHtml(str) {
@@ -848,12 +850,15 @@ function resetAll() {
   document.getElementById('schedSwitch').checked = false;
   document.getElementById('schedBody').classList.remove('open');
   document.getElementById('sendBtn').textContent = '✉ Send Email';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('sendBtn').style.opacity = '0.4';
+  document.getElementById('sendBtn').style.cursor = 'not-allowed';
   toast('Reset ✓');
 }
 
 // ── INIT ──
 applyDefaults();
-renderQueue();
+loadQueueFromSheet();
 setMinDate();
 </script>
 </body>
