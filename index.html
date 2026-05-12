@@ -389,6 +389,8 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
 // ── CONSTANTS ──
 var SEND_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d86da420554047f0af1dcd255d7d52f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=e4NKwdw8PrmV4tFc1D_9kCRpev-cybMUZ0-qMirCbYY';
 var SCHEDULE_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a28065620d474ac0b3b4024ea0e4c3ee/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asADKS7NKK5D0cxsVSRTw5KyN2MI4IynVKfkk8rELhY';
+var QUEUE_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1df821c9bca84cf399afee5964683c2f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PEJkLNdtKUgm7syzTIs_KmSVnV0Tm7nGZ1WDCJFQ-Sk';
+var CANCEL_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6cd72c78ff5d4be7a5c541f9c3b611f4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sYNkp7wMMBA_VMFWrjki19QCFVSlX5c-uhwSiSmypos';
 var cardType = 'birthday';
 var tplImg = null, photoImg = null;
 var liveTimer = null;
@@ -731,19 +733,19 @@ async function scheduleEmail() {
       body: JSON.stringify(payload),
     });
     if (res.ok) {
-      toast('Scheduled ✓');
-    //   await loadQueueFromSheet();
-    scheduledQueue.push({
-        id: Date.now().toString(),
-        to: payload.to,
-        subject: payload.subject,
-        scheduleAt: payload.scheduleAt,
-        timezone: tz
-    });
-    renderQueue();
-    } else {
-      toast('Scheduling failed', true);
-    }
+        try { data = await res.json(); } catch(e) {}
+        toast('Scheduled ✓');
+        scheduledQueue.push({
+            id:         data.id || Date.now().toString(),
+            to:         payload.to,
+            subject:    payload.subject,
+            scheduleAt: payload.scheduleAt,
+            timezone:   tz
+        });
+        renderQueue();
+        } else {
+            toast('Scheduling failed', true);
+        }
   } catch(err) {
     toast('Failed: ' + err.message, true);
   }
@@ -797,45 +799,51 @@ function renderQueue() {
   });
 }
 
-// async function loadQueueFromSheet() {
-//   try {
-//     var res = await fetch(GAS_URL, {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-//       body: JSON.stringify({ action: 'getQueue' }),
-//       redirect: 'follow'
-//     });
-//     var data = await res.json();
-//     if (data.status === 'ok') {
-//       scheduledQueue = data.queue || [];
-//       renderQueue();
-//     }
-//   } catch(err) {
-//     console.error('Failed to load queue:', err);
-//   }
-// }
-
-// async function cancelScheduled(id) {
-//   try {
-//     toast('Cancelling...');
-//     var res = await fetch(GAS_URL, {
-//       method: 'POST',
-//       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-//       body: JSON.stringify({ action: 'cancel', id: id }),
-//       redirect: 'follow'
-//     });
-//     var data = await res.json();
-//     toast('Cancelled ✓');
-//   } catch(err) {
-//     toast('Cancel failed: ' + err.message, true);
-//   }
-//   await loadQueueFromSheet();
-// }
+async function loadQueueFromSheet() {
+  try {
+    var res = await fetch(QUEUE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getQueue' }),
+    });
+     var data = await res.json();
+    // Excel Online returns rows in 'value' array
+    scheduledQueue = (data.value || []).map(function(r) {
+      return {
+        id:         r.ID,
+        to:         r.To,
+        cc:         r.CC,
+        subject:    r.Subject,
+        scheduleAt: r.ScheduledAt,
+        timezone:   r.Timezone,
+        status:     r.Status
+      };
+    });
+    renderQueue();
+  } catch(err) {
+    console.error('Failed to load queue:', err);
+  }
+}
 
 async function cancelScheduled(id) {
-  scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
-  renderQueue();
-  toast('Removed from queue ✓');
+  try {
+    toast('Cancelling...');
+    var res = await fetch(CANCEL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: id }),
+    });
+    if (res.ok) {
+      scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
+      renderQueue();
+      toast('Cancelled ✓');
+    } else {
+      toast('Cancel failed', true);
+    }
+  } catch(err) {
+    toast('Cancel failed: ' + err.message, true);
+  }
+  await loadQueueFromSheet();
 }
 
 function escHtml(str) {
@@ -868,7 +876,7 @@ function resetAll() {
 
 // ── INIT ──
 applyDefaults();
-// loadQueueFromSheet();
+loadQueueFromSheet();
 setMinDate();
 </script>
 </body>
