@@ -717,7 +717,18 @@ async function scheduleEmail() {
   var tz   = document.getElementById('schedTz').value;
   if (!date || !time) { toast('Pick a date and time', true); return; }
 
-  var sendAt = new Date(date + 'T' + time);
+  var tzOffsets = {
+    'Asia/Kolkata':        '+05:30',
+    'America/New_York':    '-04:00',
+    'America/Los_Angeles': '-07:00',
+    'Europe/London':       '+01:00',
+    'Europe/Berlin':       '+02:00',
+    'Asia/Dubai':          '+04:00',
+    'Asia/Singapore':      '+08:00',
+    'UTC':                 '+00:00'
+    };
+    var offset = tzOffsets[tz] || '+00:00';
+    var sendAt = new Date(date + 'T' + time + ':00' + offset);
   if (sendAt <= new Date()) { toast('Scheduled time is in the past', true); return; }
 
   var payload = buildPayload();
