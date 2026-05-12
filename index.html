@@ -759,6 +759,7 @@ function buildPayload() {
   var ctx = tempCanvas.getContext('2d');
   ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
   var compressed = tempCanvas.toDataURL('image/jpeg', 0.82);
+  var base64Only = compressed.split(',')[1];
 
   return {
     to:          toEmails.join(','),
@@ -766,7 +767,7 @@ function buildPayload() {
     subject:     cardType === 'birthday'
                    ? 'Happy Birthday ' + (document.getElementById('inp-name').value || '')
                    : 'Happy Work Anniversary ' + (document.getElementById('inp-name').value || ''),
-    imageBase64: compressed
+    imageBase64: base64Only  
   };
 }
 
