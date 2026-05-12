@@ -733,6 +733,7 @@ async function scheduleEmail() {
       body: JSON.stringify(payload),
     });
     if (res.ok) {
+        var data = {};
         try { data = await res.json(); } catch(e) {}
         toast('Scheduled ✓');
         scheduledQueue.push({
@@ -837,13 +838,14 @@ async function cancelScheduled(id) {
       scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
       renderQueue();
       toast('Cancelled ✓');
+      await loadQueueFromSheet();
     } else {
       toast('Cancel failed', true);
     }
   } catch(err) {
     toast('Cancel failed: ' + err.message, true);
   }
-  await loadQueueFromSheet();
+  
 }
 
 function escHtml(str) {
