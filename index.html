@@ -387,8 +387,8 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
 
 <script>
 // ── CONSTANTS ──
-var GAS_URL = 'https://script.google.com/macros/s/AKfycbyo8tqKdgoL7w111CSUBRtq104lRqNNVeBmOj-ZR3wlCxZeUCpAnJu0etOBhdVKYdg/exec';
-
+var SEND_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d86da420554047f0af1dcd255d7d52f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=e4NKwdw8PrmV4tFc1D_9kCRpev-cybMUZ0-qMirCbYY';
+var SCHEDULE_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a28065620d474ac0b3b4024ea0e4c3ee/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asADKS7NKK5D0cxsVSRTw5KyN2MI4IynVKfkk8rELhY';
 var cardType = 'birthday';
 var tplImg = null, photoImg = null;
 var liveTimer = null;
@@ -694,15 +694,13 @@ async function sendEmail() {
   var payload = buildPayload();
   try {
     toast('Sending...');
-    var res = await fetch(GAS_URL, {
+    var res = await fetch(SEND_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
-      redirect: 'follow'
     });
-    var data = await res.json();
-    if (data.status === 'ok') toast('Email sent successfully ✓');
-    else toast(data.message || 'Error sending email', true);
+    if (res.ok) toast('Email sent successfully ✓');
+    else toast('Error sending email', true);
   } catch(err) {
     toast('Failed: ' + err.message, true);
   }
@@ -727,18 +725,24 @@ async function scheduleEmail() {
 
   try {
     toast('Scheduling...');
-    var res = await fetch(GAS_URL, {
+    var res = await fetch(SCHEDULE_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
-      redirect: 'follow'
     });
-    var data = await res.json();
-    if (data.status === 'ok') {
+    if (res.ok) {
       toast('Scheduled ✓');
-      await loadQueueFromSheet();
+    //   await loadQueueFromSheet();
+    scheduledQueue.push({
+        id: Date.now().toString(),
+        to: payload.to,
+        subject: payload.subject,
+        scheduleAt: payload.scheduleAt,
+        timezone: tz
+    });
+    renderQueue();
     } else {
-      toast(data.message || 'Scheduling failed', true);
+      toast('Scheduling failed', true);
     }
   } catch(err) {
     toast('Failed: ' + err.message, true);
@@ -762,8 +766,7 @@ function buildPayload() {
     subject:     cardType === 'birthday'
                    ? 'Happy Birthday ' + (document.getElementById('inp-name').value || '')
                    : 'Happy Work Anniversary ' + (document.getElementById('inp-name').value || ''),
-    imageBase64: compressed,
-    action:      'send'
+    imageBase64: compressed
   };
 }
 
@@ -793,39 +796,45 @@ function renderQueue() {
   });
 }
 
-async function loadQueueFromSheet() {
-  try {
-    var res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'getQueue' }),
-      redirect: 'follow'
-    });
-    var data = await res.json();
-    if (data.status === 'ok') {
-      scheduledQueue = data.queue || [];
-      renderQueue();
-    }
-  } catch(err) {
-    console.error('Failed to load queue:', err);
-  }
-}
+// async function loadQueueFromSheet() {
+//   try {
+//     var res = await fetch(GAS_URL, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+//       body: JSON.stringify({ action: 'getQueue' }),
+//       redirect: 'follow'
+//     });
+//     var data = await res.json();
+//     if (data.status === 'ok') {
+//       scheduledQueue = data.queue || [];
+//       renderQueue();
+//     }
+//   } catch(err) {
+//     console.error('Failed to load queue:', err);
+//   }
+// }
+
+// async function cancelScheduled(id) {
+//   try {
+//     toast('Cancelling...');
+//     var res = await fetch(GAS_URL, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+//       body: JSON.stringify({ action: 'cancel', id: id }),
+//       redirect: 'follow'
+//     });
+//     var data = await res.json();
+//     toast('Cancelled ✓');
+//   } catch(err) {
+//     toast('Cancel failed: ' + err.message, true);
+//   }
+//   await loadQueueFromSheet();
+// }
 
 async function cancelScheduled(id) {
-  try {
-    toast('Cancelling...');
-    var res = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'cancel', id: id }),
-      redirect: 'follow'
-    });
-    var data = await res.json();
-    toast('Cancelled ✓');
-  } catch(err) {
-    toast('Cancel failed: ' + err.message, true);
-  }
-  await loadQueueFromSheet();
+  scheduledQueue = scheduledQueue.filter(function(i){ return i.id !== id; });
+  renderQueue();
+  toast('Removed from queue ✓');
 }
 
 function escHtml(str) {
@@ -858,7 +867,7 @@ function resetAll() {
 
 // ── INIT ──
 applyDefaults();
-loadQueueFromSheet();
+// loadQueueFromSheet();
 setMinDate();
 </script>
 </body>
