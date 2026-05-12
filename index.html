@@ -696,7 +696,7 @@ async function sendEmail() {
     toast('Sending...');
     var res = await fetch(SEND_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (res.ok) toast('Email sent successfully ✓');
@@ -727,7 +727,7 @@ async function scheduleEmail() {
     toast('Scheduling...');
     var res = await fetch(SCHEDULE_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
     if (res.ok) {
