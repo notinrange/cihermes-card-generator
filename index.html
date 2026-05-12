@@ -751,14 +751,14 @@ async function scheduleEmail() {
 
 function buildPayload() {
   var canvas = document.getElementById('outCanvas');
-  var maxW = 1200;
+  var maxW = 800;
   var scale = Math.min(1, maxW / canvas.width);
   var tempCanvas = document.createElement('canvas');
   tempCanvas.width  = Math.round(canvas.width  * scale);
   tempCanvas.height = Math.round(canvas.height * scale);
   var ctx = tempCanvas.getContext('2d');
   ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-  var compressed = tempCanvas.toDataURL('image/jpeg', 0.82);
+  var compressed = tempCanvas.toDataURL('image/png', 0.65);
   var base64Only = compressed.split(',')[1];
 
   return {
