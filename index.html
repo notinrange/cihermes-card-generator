@@ -819,8 +819,11 @@ async function loadQueueFromSheet() {
       body: JSON.stringify({ action: 'getQueue' }),
     });
      var data = await res.json();
+     var now = new Date();
     // Excel Online returns rows in 'value' array
-    scheduledQueue = (data.value || []).map(function(r) {
+    scheduledQueue = (data.value || []).filter(function(r){
+      return r.status === 'pending' && new Date(r.ScheduledAt) > now;
+    }).map(function(r) {
       return {
         id:         r.ID,
         to:         r.To,
