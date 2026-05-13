@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ciHERMES Card Generator</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@400;700;800&family=Pacifico&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -277,8 +277,8 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
         <div class="sl-item"><div class="sl-lbl">X <span class="sv" id="v-nx">0</span>px</div><input type="range" id="sl-nx" min="0" max="1400" value="0" oninput="sv('v-nx',this.value);schedLive()"></div>
         <div class="sl-item"><div class="sl-lbl">Y <span class="sv" id="v-ny">0</span>px</div><input type="range" id="sl-ny" min="0" max="1000" value="0" oninput="sv('v-ny',this.value);schedLive()"></div>
         <div class="sl-item"><div class="sl-lbl">Font Size <span class="sv" id="v-ns">32</span>px</div><input type="range" id="sl-ns" min="10" max="120" value="32" oninput="sv('v-ns',this.value);schedLive()"></div>
-        <div class="sl-item"><div class="sl-lbl">Color</div><input type="color" id="nameColor" value="#ffffff" oninput="schedLive()"></div>
-        <div class="sl-item"><div class="sl-lbl">Style</div><select id="nameStyle" onchange="schedLive()"><option value="800">ExtraBold</option><option value="700">Bold</option><option value="600">SemiBold</option><option value="400">Regular</option></select></div>
+        <div class="sl-item"><div class="sl-lbl">Color</div><input type="color" id="nameColor" value="#feae38" oninput="schedLive()"></div>
+        <div class="sl-item"><div class="sl-lbl">Style</div><select id="nameStyle" onchange="schedLive()"><option value="800">ExtraBold</option><option value="700" selected>Bold</option><option value="600">SemiBold</option><option value="400">Regular</option></select></div>
         <div class="sl-item"><div class="sl-lbl">Align</div><select id="nameAlign" onchange="schedLive()"><option value="center">Center</option><option value="left">Left</option><option value="right">Right</option></select></div>
       </div>
       <div class="adv-section-label" id="dobSection" style="color:#f85149;">📅 Date of Birth</div>
@@ -288,12 +288,12 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
         <div class="sl-item"><div class="sl-lbl">Font Size <span class="sv" id="v-ds">26</span>px</div><input type="range" id="sl-ds" min="10" max="100" value="26" oninput="sv('v-ds',this.value);schedLive()"></div>
         <div class="sl-item"><div class="sl-lbl">Color</div><input type="color" id="dobColor" value="#ffffff" oninput="schedLive()"></div>
       </div>
-      <div class="adv-section-label" id="yearsSection" style="color:#fbbf24;display:none;">🔢 Years Number</div>
+      <div class="adv-section-label" id="yearsSection" style="color:#feae38;display:none;">🔢 Years Number</div>
       <div class="sliders-grid" id="yearsSliders" style="display:none">
         <div class="sl-item"><div class="sl-lbl">X <span class="sv" id="v-yx">0</span>px</div><input type="range" id="sl-yx" min="0" max="1400" value="0" oninput="sv('v-yx',this.value);schedLive()"></div>
         <div class="sl-item"><div class="sl-lbl">Y <span class="sv" id="v-yy">0</span>px</div><input type="range" id="sl-yy" min="0" max="1000" value="0" oninput="sv('v-yy',this.value);schedLive()"></div>
-        <div class="sl-item"><div class="sl-lbl">Font Size <span class="sv" id="v-ys">80</span>px</div><input type="range" id="sl-ys" min="20" max="200" value="80" oninput="sv('v-ys',this.value);schedLive()"></div>
-        <div class="sl-item"><div class="sl-lbl">Color</div><input type="color" id="yearsColor" value="#fbbf24" oninput="schedLive()"></div>
+        <div class="sl-item"><div class="sl-lbl">Font Size <span class="sv" id="v-ys">80</span>px</div><input type="range" id="sl-ys" min="20" max="400" value="80" oninput="sv('v-ys',this.value);schedLive()"></div>
+        <div class="sl-item"><div class="sl-lbl">Color</div><input type="color" id="yearsColor" value="#feae38" oninput="schedLive()"></div>
       </div>
     </div>
   </div>
@@ -395,12 +395,24 @@ var cardType = 'birthday';
 var tplImg = null, photoImg = null;
 var liveTimer = null;
 
+
+// ── FONT PRELOAD ──
+Promise.all([
+  document.fonts.load('400 100px "Anton"'),
+  document.fonts.load('400 100px "Bebas Neue"'),
+  document.fonts.load('400 100px "Montserrat"'),
+  document.fonts.load('700 100px "Montserrat"'),
+  document.fonts.load('700 100px "Playfair Display"')
+]).then(function() {
+  schedLive();
+})
+
 // Scheduled items stored locally
 var scheduledQueue = [];
 
 var DEFAULTS = {
   birthday:    { px:804,  py:229, pw:406, ph:452, pr:0, nx:1006, ny:742, ns:38, nalign:'center', dx:1014, dy:780, ds:28, yx:0, yy:0, ys:80 },
-  anniversary: { px:153,  py:479, pw:328, ph:426, pr:0, nx:793,  ny:502, ns:52, nalign:'left',   dx:952,  dy:852, ds:200, yx:952, yy:852, ys:177 }
+  anniversary: { px:160,  py:558, pw:373, ph:437, pr:0, nx:657,  ny:456, ns:50, nalign:'center',   dx:952,  dy:880, ds:200, yx:952, yy:886, ys:331 }
 };
 
 // ── HELPERS ──
@@ -513,33 +525,53 @@ function renderLive() {
 
 // ── CORE RENDER ──
 function renderToCtx(ctx, W, H, scale) {
-  ctx.clearRect(0, 0, W, H);
-  ctx.drawImage(tplImg, 0, 0, W, H);
-  if (photoImg) {
-    var px=gv('sl-px')*scale, py=gv('sl-py')*scale, pw=gv('sl-pw')*scale, ph=gv('sl-ph')*scale, pr=gv('sl-pr')*scale;
-    ctx.save();
-    ctx.beginPath();
-    roundRect(ctx, px, py, pw, ph, pr);
-    ctx.clip();
-    var par=photoImg.naturalWidth/photoImg.naturalHeight, far=pw/ph, dw,dh,dx,dy;
-    if(par>far){ dh=ph;dw=dh*par;dx=px-(dw-pw)/2;dy=py; }
-    else { dw=pw;dh=dw/par;dx=px;dy=py-(dh-ph)/2; }
-    ctx.drawImage(photoImg, dx, dy, dw, dh);
-    ctx.restore();
-  }
-  var name  = (document.getElementById('inp-name').value  || '').trim();
-  var dob   = (document.getElementById('inp-dob').value   || '').trim();
-  var years = (document.getElementById('inp-years').value || '').trim();
-  var nc = document.getElementById('nameColor').value;
-  var dc = document.getElementById('dobColor').value;
-  var yc = document.getElementById('yearsColor').value;
-  var nalign = document.getElementById('nameAlign').value;
-  if (name) {
-    var nx=gv('sl-nx')*scale, ny=gv('sl-ny')*scale, ns=gv('sl-ns')*scale;
+    ctx.clearRect(0, 0, W, H);
+    ctx.drawImage(tplImg, 0, 0, W, H);
+    if (photoImg) {
+      var px=gv('sl-px')*scale, py=gv('sl-py')*scale, pw=gv('sl-pw')*scale, ph=gv('sl-ph')*scale, pr=gv('sl-pr')*scale;
+      ctx.save();
+      ctx.beginPath();
+      roundRect(ctx, px, py, pw, ph, pr);
+      ctx.clip();
+      var par=photoImg.naturalWidth/photoImg.naturalHeight, far=pw/ph, dw,dh,dx,dy;
+      if(par>far){ dh=ph;dw=dh*par;dx=px-(dw-pw)/2;dy=py; }
+      else { dw=pw;dh=dw/par;dx=px;dy=py-(dh-ph)/2; }
+      ctx.drawImage(photoImg, dx, dy, dw, dh);
+      ctx.restore();
+    }
+    var name  = (document.getElementById('inp-name').value  || '').trim();
+    var dob   = (document.getElementById('inp-dob').value   || '').trim();
+    var years = (document.getElementById('inp-years').value || '').trim();
+    var nc = document.getElementById('nameColor').value;
+    var dc = document.getElementById('dobColor').value;
+    var yc = document.getElementById('yearsColor').value;
+    var nalign = document.getElementById('nameAlign').value;
+    if (name) {
+    var nx = gv('sl-nx') * scale,
+        ny = gv('sl-ny') * scale,
+        ns = gv('sl-ns') * scale;
+
+    var fontFamily = cardType === 'birthday'
+      ? '"Inter", sans-serif'
+      : '"Montserrat", sans-serif';
+
+    var fontStyle = cardType === 'birthday'
+      ? 'italic '
+      : '';
+
     ctx.save();
     ctx.textAlign = nalign;
-    ctx.font = 'italic ' + document.getElementById('nameStyle').value + ' ' + ns + 'px "Inter", sans-serif';
-    ctx.shadowColor='rgba(0,0,0,0.55)'; ctx.shadowBlur=6*scale; ctx.shadowOffsetX=1*scale; ctx.shadowOffsetY=1*scale;
+    ctx.font = fontStyle + document.getElementById('nameStyle').value + ' ' + ns + 'px ' + fontFamily;
+
+    if (cardType !== 'birthday') {
+      ctx.letterSpacing = Math.round(3 * scale) + 'px';
+    }
+
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = 6 * scale;
+    ctx.shadowOffsetX = 1 * scale;
+    ctx.shadowOffsetY = 1 * scale;
+
     ctx.fillStyle = nc;
     ctx.fillText(name, nx, ny);
     ctx.restore();
@@ -558,8 +590,11 @@ function renderToCtx(ctx, W, H, scale) {
     var yx=gv('sl-yx')*scale, yy=gv('sl-yy')*scale, ys=gv('sl-ys')*scale;
     ctx.save();
     ctx.textAlign = 'center';
-    ctx.font = '800 ' + ys + 'px "Inter", sans-serif';
-    ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=8*scale;
+    ctx.letterSpacing = '0px';
+    ctx.font = '400 ' + ys + 'px "Playfair Display", sans-serif';
+    ctx.shadowColor='#feae38';
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
     ctx.fillStyle = yc;
     ctx.fillText(years, yx, yy);
     ctx.restore();
@@ -822,7 +857,7 @@ async function loadQueueFromSheet() {
      var now = new Date();
     // Excel Online returns rows in 'value' array
     scheduledQueue = (data.value || []).filter(function(r){
-      return r.status === 'pending' && new Date(r.ScheduledAt) > now;
+      return r.Status === 'pending' && new Date(r.ScheduledAt) > now;
     }).map(function(r) {
       return {
         id:         r.ID,
