@@ -391,6 +391,7 @@ var SEND_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api
 var SCHEDULE_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a28065620d474ac0b3b4024ea0e4c3ee/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=asADKS7NKK5D0cxsVSRTw5KyN2MI4IynVKfkk8rELhY';
 var QUEUE_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/1df821c9bca84cf399afee5964683c2f/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=PEJkLNdtKUgm7syzTIs_KmSVnV0Tm7nGZ1WDCJFQ-Sk';
 var CANCEL_URL = 'https://default884970119af04da5af42a0cb89cbdd.11.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6cd72c78ff5d4be7a5c541f9c3b611f4/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sYNkp7wMMBA_VMFWrjki19QCFVSlX5c-uhwSiSmypos';
+var UPLOAD_URL = 'https://ciparciaicarduploader.azurewebsites.net/upload';
 var cardType = 'birthday';
 var tplImg = null, photoImg = null;
 var liveTimer = null;
@@ -728,8 +729,9 @@ async function sendEmail() {
   var canvas = document.getElementById('outCanvas');
   if (!canvas.width) { toast('Generate card first', true); return; }
   if (!toEmails.length) { toast('Enter recipient email', true); return; }
-  var payload = buildPayload();
   try {
+    toast('Uploading image...');
+    var payload = await buildPayload();
     toast('Sending...');
     var res = await fetch(SEND_URL, {
       method: 'POST',
@@ -766,12 +768,13 @@ async function scheduleEmail() {
     var sendAt = new Date(date + 'T' + time + ':00' + offset);
   if (sendAt <= new Date()) { toast('Scheduled time is in the past', true); return; }
 
-  var payload = buildPayload();
-  payload.scheduleAt = sendAt.toISOString();
-  payload.timezone   = tz;
-  payload.action     = 'schedule';
-
   try {
+    toast('Uploading image...');
+    var payload = await buildPayload();
+    payload.scheduleAt = sendAt.toISOString();
+    payload.timezone   = tz;
+    payload.action     = 'schedule';
+
     toast('Scheduling...');
     var res = await fetch(SCHEDULE_URL, {
       method: 'POST',
@@ -798,7 +801,7 @@ async function scheduleEmail() {
   }
 }
 
-function buildPayload() {
+async function buildPayload() {
   var canvas = document.getElementById('outCanvas');
   var maxW = 800;
   var scale = Math.min(1, maxW / canvas.width);
@@ -807,8 +810,9 @@ function buildPayload() {
   tempCanvas.height = Math.round(canvas.height * scale);
   var ctx = tempCanvas.getContext('2d');
   ctx.drawImage(canvas, 0, 0, tempCanvas.width, tempCanvas.height);
-  var compressed = tempCanvas.toDataURL('image/png', 0.65);
+  var compressed = tempCanvas.toDataURL('image/png');
   var base64Only = compressed.split(',')[1];
+  var imageUrl = await uploadCardImage(base64Only);
 
   return {
     to:          toEmails.join(','),
@@ -816,8 +820,30 @@ function buildPayload() {
     subject:     cardType === 'birthday'
                    ? 'Happy Birthday ' + (document.getElementById('inp-name').value || '')
                    : 'Happy Work Anniversary ' + (document.getElementById('inp-name').value || ''),
-    imageBase64: base64Only  
+    imageUrl:    imageUrl
   };
+}
+
+async function uploadCardImage(base64Only) {
+  var res = await fetch(UPLOAD_URL, {
+    method: 'POST',
+    headers: {
+      'accept': 'application/json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ imageBase64: base64Only })
+  });
+
+  if (!res.ok) {
+    throw new Error('Image upload failed');
+  }
+
+  var data = await res.json();
+  if (!data.success || !data.imageUrl) {
+    throw new Error('Image upload response did not include a URL');
+  }
+
+  return data.imageUrl;
 }
 
 // ── QUEUE UI ──
