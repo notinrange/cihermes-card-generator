@@ -452,7 +452,11 @@ function setType(t) {
   document.getElementById('yearsSliders').style.display = t==='anniversary' ? '' : 'none';
   document.getElementById('detailsTitle').textContent = t==='birthday' ? '③ Birthday Details' : '③ Anniversary Details';
   applyDefaults();
-  schedLive();
+  if (t === 'birthday') {
+    loadDefaultTemplate('assets/birthday.png');
+  } else {
+    loadDefaultTemplate('assets/anniversary.png');
+  }
 }
 
 function applyDefaults() {
@@ -824,6 +828,32 @@ async function buildPayload() {
   };
 }
 
+function loadDefaultTemplate(path){
+  var img = new Image();
+  img.onload = function(){
+    tplImg = img;
+    document.getElementById('tplPrevImg').src = path;
+    document.getElementById('tplPrev').style.display = 'block';
+    document.getElementById('tplIcon').textContent = '✅';
+    document.getElementById('tplHint').style.display = 'none';
+
+    var fn = document.getElementById('tplName');
+    fn.textContent = 'Default template loaded';
+    fn.style.display = 'block';
+
+    document.getElementById('tplZone').classList.add('filled');
+
+    updateSliderMaxes(img.naturalWidth,img.naturalHeight);
+    schedLive();
+  }
+
+  img.onerror = function(){
+    toast('Failed to load default template', true);
+  };
+
+  img.src = path;
+}
+
 async function uploadCardImage(base64Only) {
   var res = await fetch(UPLOAD_URL, {
     method: 'POST',
@@ -954,6 +984,7 @@ function resetAll() {
 // ── INIT ──
 applyDefaults();
 loadQueueFromSheet();
+loadDefaultTemplate('assets/birthday.png');
 setMinDate();
 </script>
 </body>
