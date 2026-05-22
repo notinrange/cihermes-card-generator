@@ -240,7 +240,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     <div class="fields-grid" id="fieldsGrid">
       <div class="field" id="fld-name">
         <label>Full Name</label>
-        <input type="text" id="inp-name" placeholder="e.g. Rahul Kumar" oninput="schedLive()">
+        <input type="text" id="inp-name" placeholder="e.g. Rahul Kumar" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase(); schedLive()">
       </div>
       <div class="field" id="fld-dob">
         <label>Date of Birth</label>
@@ -412,7 +412,7 @@ Promise.all([
 var scheduledQueue = [];
 
 var DEFAULTS = {
-  birthday:    { px:804,  py:229, pw:406, ph:452, pr:0, nx:1006, ny:742, ns:38, nalign:'center', dx:1014, dy:780, ds:28, yx:0, yy:0, ys:80 },
+  birthday:    { px:802,  py:229, pw:408, ph:454, pr:0, nx:1006, ny:742, ns:38, nalign:'center', dx:1014, dy:780, ds:28, yx:0, yy:0, ys:80 },
   anniversary: { px:160,  py:558, pw:373, ph:437, pr:0, nx:657,  ny:456, ns:50, nalign:'center',   dx:952,  dy:880, ds:200, yx:952, yy:886, ys:331 }
 };
 
@@ -426,6 +426,9 @@ function toast(msg, isErr) {
 }
 function sv(id, val) { document.getElementById(id).textContent = val; }
 function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function upperName() {
+  return (document.getElementById('inp-name').value || '').trim().toUpperCase();
+}
 function readFile(file, cb) {
   var r = new FileReader();
   r.onload = function(e) {
@@ -544,7 +547,7 @@ function renderToCtx(ctx, W, H, scale) {
       ctx.drawImage(photoImg, dx, dy, dw, dh);
       ctx.restore();
     }
-    var name  = (document.getElementById('inp-name').value  || '').trim();
+    var name  = upperName();
     var dob   = (document.getElementById('inp-dob').value   || '').trim();
     var years = (document.getElementById('inp-years').value || '').trim();
     var nc = document.getElementById('nameColor').value;
@@ -634,7 +637,7 @@ function generateCard() {
 
 function downloadCard() {
   var cv = document.getElementById('outCanvas');
-  var name = (document.getElementById('inp-name').value || cardType) + '_card.png';
+  var name = (upperName() || cardType.toUpperCase()) + '_card.png';
   var a = document.createElement('a');
   a.download = name.replace(/\s+/g,'_'); a.href = cv.toDataURL('image/png');
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -822,8 +825,8 @@ async function buildPayload() {
     to:          toEmails.join(','),
     cc:          ccEmails.join(','),
     subject:     cardType === 'birthday'
-                   ? 'Happy Birthday ' + (document.getElementById('inp-name').value || '')
-                   : 'Happy Work Anniversary ' + (document.getElementById('inp-name').value || ''),
+                   ? 'Happy Birthday ' + upperName()
+                   : 'Happy Work Anniversary ' + upperName(),
     imageUrl:    imageUrl
   };
 }
