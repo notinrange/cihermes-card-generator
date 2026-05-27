@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ciHERMES Card Generator</title>
+<title>ciHERMES Events Scheduler</title>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Montserrat:wght@400;700;800&family=Pacifico&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Sora:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<!-- Flatpickr -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -37,7 +40,7 @@ body {
 
 /* HEADER */
 .hdr { display: flex; align-items: center; gap: 1rem; margin-bottom: 2.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-.hdr-logo { width: 44px; height: 44px; background: linear-gradient(135deg, var(--accent), #1d4ed8); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; box-shadow: 0 4px 20px rgba(37,99,235,0.35); }
+.hdr-logo { width: 72px; height: 72px;  border-radius: 10px; display: flex; align-items: center; justify-content: center;}
 .hdr h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
 .hdr p { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
@@ -48,7 +51,7 @@ body {
 
 /* TYPE SELECT */
 .type-select { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.type-btn { padding: 1rem; border-radius: 10px; border: 2px solid var(--border2); background: var(--surface2); color: var(--muted); font-style: italic; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
+.type-btn { padding: 1rem; border-radius: 10px; border: 2px solid var(--border2); background: var(--surface2); color: var(--muted); font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: all 0.2s; text-align: center; }
 .type-btn span { display: block; font-size: 1.6rem; margin-bottom: 0.3rem; }
 .type-btn:hover { border-color: var(--accent); color: var(--text); }
 .type-btn.active { border-color: var(--accent2); background: rgba(251,191,36,0.08); color: var(--accent2); box-shadow: 0 0 0 1px var(--accent2), inset 0 0 20px rgba(251,191,36,0.05); }
@@ -85,13 +88,23 @@ body {
 .field select option { background: var(--surface2); }
 
 /* EMAIL CHIPS */
-.email-box { min-height: 48px; background: var(--surface2); border: 1.5px solid var(--border2); border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; transition: border-color .2s; }
+.email-box { min-height: 48px; background: var(--surface2); border: 1.5px solid var(--border2); border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; transition: border-color .2s; position: relative; }
 .email-box:focus-within { border-color: var(--accent2); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .email-chip { display: flex; align-items: center; gap: 8px; background: rgba(251,191,36,.16); border: 1px solid rgba(251,191,36,.45); color: var(--accent2); padding: 6px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; animation: chipIn .18s ease; }
 .email-chip button { border: none; background: none; color: var(--accent2); cursor: pointer; font-size: .9rem; line-height: 1; }
 .email-chip button:hover { opacity: .7; }
-.chip-input { flex: 1; min-width: 180px; background: transparent !important; border: none !important; outline: none; color: var(--text); padding: 4px; font-size: .85rem; }
+.chip-input { flex: 1; min-width: 180px; background: transparent !important; border: none !important; outline: none; color: var(--text); padding: 4px; font-size: .85rem; position: relative; }
+.email-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1.5px solid var(--accent2); border-top: none; border-radius: 0 0 8px 8px; max-height: 180px; overflow-y: auto; z-index: 10; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 100%; }
+.email-suggestions::-webkit-scrollbar { width: 6px; }
+.email-suggestions::-webkit-scrollbar-track { background: transparent; }
+.email-suggestions::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.email-suggestions::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+.email-suggestions.show { display: block; }
+.email-suggestion { padding: 10px 12px; cursor: pointer; font-size: .85rem; color: var(--text); transition: all 0.12s; border-bottom: 1px solid var(--border); }
+.email-suggestion:last-child { border-bottom: none; }
+.email-suggestion:hover { background: rgba(251,191,36,.1); color: var(--accent2); padding-left: 16px; }
+.email-suggestion.active { background: rgba(251,191,36,.2); color: var(--accent2); }
 @keyframes chipIn { from { opacity:0; transform:translateY(6px) scale(.95); } to { opacity:1; transform:none; } }
 
 /* SCHEDULE TOGGLE */
@@ -112,10 +125,89 @@ input:checked + .sw-slider::before { transform: translateX(18px); }
 @media(max-width:520px){ .sched-dt-grid { grid-template-columns: 1fr; } }
 .sched-field label { font-size: 0.65rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: 0.3rem; }
 .sched-field input, .sched-field select { width: 100%; background: var(--surface2); border: 1.5px solid var(--border2); border-radius: 8px; padding: 0.5rem 0.75rem; color: var(--text); font-size: 0.85rem; outline: none; transition: border-color .2s; font-family: 'Inter', sans-serif; }
+.sched-field input::placeholder { color: #5a7090; }
+.sched-field input.flatpickr-input,
+.sched-field input.flatpickr-input[readonly] { color: var(--text); -webkit-text-fill-color: var(--text); opacity: 1; cursor: pointer; }
 .sched-field input:focus, .sched-field select:focus { border-color: var(--accent2); }
 .sched-field select option { background: var(--surface2); }
 .sched-tz { margin-bottom: 0.75rem; }
 .sched-pill { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(37,99,235,0.12); border: 1px solid rgba(37,99,235,0.3); color: #7dd3fc; padding: 0.35rem 0.8rem; border-radius: 999px; font-size: 0.7rem; font-weight: 600; margin-top: 0.25rem; min-height: 28px; }
+
+/* FLATPICKR DARK THEME */
+.flatpickr-calendar {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+}
+.flatpickr-calendar.arrowTop::before,
+.flatpickr-calendar.arrowTop::after,
+.flatpickr-calendar.arrowBottom::before,
+.flatpickr-calendar.arrowBottom::after { border-bottom-color: var(--surface); border-top-color: var(--surface); }
+.flatpickr-months,
+.flatpickr-month,
+.flatpickr-current-month,
+.flatpickr-weekdays,
+.flatpickr-weekdaycontainer { background: var(--surface); color: var(--text); fill: var(--text); }
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 700;
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months option { background: var(--surface2); color: var(--text); }
+.flatpickr-weekday { color: var(--muted); font-weight: 700; }
+.flatpickr-day {
+  color: var(--text);
+  border-color: transparent;
+}
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+  background: rgba(251,191,36,0.14);
+  border-color: rgba(251,191,36,0.35);
+  color: var(--accent2);
+}
+.flatpickr-day.today {
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover {
+  background: var(--accent2);
+  border-color: var(--accent2);
+  color: #0a0800;
+}
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay,
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+  color: #3d4d63;
+}
+.flatpickr-time {
+  background: var(--surface);
+  border-top: 1px solid var(--border2);
+}
+.flatpickr-time input,
+.flatpickr-time .flatpickr-am-pm {
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 700;
+}
+.flatpickr-time input:hover,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time input:focus {
+  background: var(--surface2);
+}
+.flatpickr-time .numInputWrapper span.arrowUp::after { border-bottom-color: var(--accent2); }
+.flatpickr-time .numInputWrapper span.arrowDown::after { border-top-color: var(--accent2); }
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month { color: var(--muted); fill: var(--muted); }
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover { color: var(--accent2); fill: var(--accent2); }
 
 /* QUEUE */
 .queue-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.25rem; }
@@ -185,25 +277,24 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
 
   <!-- HEADER -->
   <div class="hdr">
-    <div class="hdr-logo">🎗️</div>
+        <img src="assets/test.png" alt="Company Logo" class="hdr-logo">
     <div>
-      <h1>ciHERMES Card Generator</h1>
-      <p>Birthday & Work Anniversary cards — upload template, fill details, download & send.</p>
+      <h1>ciHERMES Events Scheduler</h1>
     </div>
   </div>
 
   <!-- STEP 1 -->
   <div class="card">
-    <div class="card-title">① Select Card Type</div>
+    <div class="card-title">Select Template Type</div>
     <div class="type-select">
-      <button class="type-btn active" id="btn-birthday" onclick="setType('birthday')"><span>🎂</span>Birthday Card</button>
+      <button class="type-btn active" id="btn-birthday" onclick="setType('birthday')"><span>🎂</span>Birthday</button>
       <button class="type-btn" id="btn-anniversary" onclick="setType('anniversary')"><span>🏆</span>Work Anniversary</button>
     </div>
   </div>
 
   <!-- STEP 2 -->
   <div class="card">
-    <div class="card-title">② Upload Images</div>
+    <div class="card-title">Upload Images</div>
     <div class="upload-grid">
       <div class="uzone" id="tplZone">
         <div class="uzone-head"><span>📄 Template</span><span class="dot"></span></div>
@@ -219,11 +310,11 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
         </div>
       </div>
       <div class="uzone" id="photoZone">
-        <div class="uzone-head"><span>👤 Person's Photo</span><span class="dot"></span></div>
+        <div class="uzone-head"><span>👤 Employee's Photo</span><span class="dot"></span></div>
         <div class="uzone-body">
           <input type="file" id="photoFile" accept="image/*">
           <div class="uzone-icon" id="photoIcon">📷</div>
-          <div class="uzone-hint" id="photoHint">Click to upload person's photo</div>
+          <div class="uzone-hint" id="photoHint">Click to upload employee's photo</div>
           <div class="uzone-name" id="photoName"></div>
         </div>
         <div class="uzone-prev" id="photoPrev">
@@ -236,7 +327,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
 
   <!-- STEP 3 -->
   <div class="card">
-    <div class="card-title" id="detailsTitle">③ Birthday Details</div>
+    <div class="card-title" id="detailsTitle">Birthday Details</div>
     <div class="fields-grid" id="fieldsGrid">
       <div class="field" id="fld-name">
         <label>Full Name</label>
@@ -255,7 +346,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
 
   <!-- STEP 4 -->
   <div class="card">
-    <div class="card-title">④ Position Fine-Tuning</div>
+    <div class="card-title">Position Fine-Tuning</div>
     <div class="live-wrap" id="liveWrap">
       <div class="live-lbl">Live Preview</div>
       <canvas id="liveCanvas"></canvas>
@@ -298,23 +389,25 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     </div>
   </div>
 
-  <!-- STEP 5: GENERATE + EMAIL + SCHEDULE -->
+  <!-- STEP 5: EMAIL + SCHEDULE -->
   <div class="card">
-    <div class="card-title">⑤ Generate, Download and Email</div>
+    <div class="card-title">Download and Email</div>
 
     <div class="fields-grid">
       <div class="field">
         <label>To Email</label>
         <div class="email-box" id="toBox">
           <div class="chips" id="toChips"></div>
-          <input type="text" id="toEmailInput" class="chip-input" placeholder="Type email and press Enter">
+          <input type="text" id="toEmailInput" class="chip-input" placeholder="Type email and press Enter" autocomplete="off">
+          <div class="email-suggestions" id="toSuggestions"></div>
         </div>
       </div>
       <div class="field">
         <label>CC Email (optional)</label>
         <div class="email-box" id="ccBox">
           <div class="chips" id="ccChips"></div>
-          <input type="text" id="ccEmailInput" class="chip-input" placeholder="Type email and press Enter">
+          <input type="text" id="ccEmailInput" class="chip-input" placeholder="Type email and press Enter" autocomplete="off">
+          <div class="email-suggestions" id="ccSuggestions"></div>
         </div>
       </div>
     </div>
@@ -332,16 +425,18 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     </div>
 
     <div class="sched-body" id="schedBody">
-      <div class="sched-dt-grid">
+      
+    <div class="sched-dt-grid">
         <div class="sched-field">
-          <label>Date</label>
-          <input type="date" id="schedDate" onchange="updateSchedPill()">
+            <label>📅 Date</label>
+            <input type="text" id="schedDate" placeholder="Pick a date" readonly>
         </div>
         <div class="sched-field">
-          <label>Time</label>
-          <input type="time" id="schedTime" value="09:00" onchange="updateSchedPill()">
+            <label>🕐 Time</label>
+            <input type="text" id="schedTime" placeholder="Pick a time" readonly>
         </div>
-      </div>
+    </div>
+
       <div class="sched-field sched-tz">
         <label>Timezone</label>
         <select id="schedTz" onchange="updateSchedPill()">
@@ -359,9 +454,8 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     </div>
 
     <div class="actions">
-      <button class="btn btn-primary" onclick="generateCard()">✦ Generate Card</button>
       <button class="btn btn-dl" id="dlBtn" onclick="downloadCard()">⬇ Download PNG</button>
-      <button class="btn btn-send" id="sendBtn" onclick="handleSendOrSchedule()" disabled style="opacity:0.4;cursor:not-allowed;">✉ Send Email</button>      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
+      <button class="btn btn-send" id="sendBtn" onclick="handleSendOrSchedule()">✉ Send Email</button>      <button class="btn btn-ghost" onclick="resetAll()">↺ Reset</button>
     </div>
   </div>
 
@@ -619,21 +713,6 @@ function roundRect(ctx, x, y, w, h, r) {
 }
 
 // ── GENERATE / DOWNLOAD ──
-function generateCard() {
-  if (!tplImg) { toast('Upload a template first', true); return; }
-  var out = document.getElementById('outCanvas');
-  var W = tplImg.naturalWidth, H = tplImg.naturalHeight;
-  out.width = W; out.height = H;
-  renderToCtx(out.getContext('2d'), W, H, 1);
-  document.getElementById('outputCard').style.display = 'block';
-  document.getElementById('dlBtn').style.display = 'inline-block';
-  document.getElementById('outMeta').textContent = W + ' × ' + H + ' px — ready to download';
-  document.getElementById('outputCard').scrollIntoView({ behavior:'smooth', block:'nearest' });
-  toast('Card generated ✓');
-  document.getElementById('sendBtn').disabled = false;
-  document.getElementById('sendBtn').style.opacity = '';
-  document.getElementById('sendBtn').style.cursor = '';
-}
 
 function downloadCard() {
   var cv = document.getElementById('outCanvas');
@@ -652,22 +731,88 @@ function toggleAdv() {
 }
 
 // ── SCHEDULE TOGGLE ──
+var schedDatePicker = null;
+var schedTimePicker = null;
+
+function currentScheduleDefaults() {
+  var d = new Date();
+  var pad = function(n){ return n<10?'0'+n:n; };
+  var hours = d.getHours();
+  var suffix = hours >= 12 ? 'PM' : 'AM';
+  var hour12 = hours % 12 || 12;
+  return {
+    date: d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()),
+    time: pad(hour12)+':'+pad(d.getMinutes())+' '+suffix
+  };
+}
+
+function timeTo24Hour(time) {
+  var match = (time || '').trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return time;
+  var hours = parseInt(match[1], 10);
+  var minutes = match[2];
+  var suffix = match[3].toUpperCase();
+  if (suffix === 'PM' && hours < 12) hours += 12;
+  if (suffix === 'AM' && hours === 12) hours = 0;
+  var pad = function(n){ return n<10?'0'+n:n; };
+  return pad(hours) + ':' + minutes;
+}
+
 function toggleSched() {
   var on = document.getElementById('schedSwitch').checked;
   var body = document.getElementById('schedBody');
   body.classList.toggle('open', on);
   var btn = document.getElementById('sendBtn');
   btn.textContent = on ? '🕐 Schedule Email' : '✉ Send Email';
-  document.getElementById('sendBtn').disabled = true;
-document.getElementById('sendBtn').style.opacity = '0.4';
-document.getElementById('sendBtn').style.cursor = 'not-allowed';
   if (on) setMinDate();
 }
 
 function setMinDate() {
   var d = new Date();
   var pad = function(n){ return n<10?'0'+n:n; };
-  document.getElementById('schedDate').min = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  var minDate = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  document.getElementById('schedDate').min = minDate;
+  if (schedDatePicker) schedDatePicker.set('minDate', minDate);
+}
+
+function initSchedulePickers() {
+  var defaults = currentScheduleDefaults();
+
+  if (typeof flatpickr !== 'function') {
+    var dateInput = document.getElementById('schedDate');
+    var timeInput = document.getElementById('schedTime');
+    dateInput.type = 'date';
+    timeInput.type = 'time';
+    dateInput.value = defaults.date;
+    timeInput.value = timeTo24Hour(defaults.time);
+    dateInput.readOnly = false;
+    timeInput.readOnly = false;
+    dateInput.addEventListener('change', updateSchedPill);
+    timeInput.addEventListener('change', updateSchedPill);
+    updateSchedPill();
+    return;
+  }
+
+  schedDatePicker = flatpickr('#schedDate', {
+    dateFormat: 'Y-m-d',
+    minDate: 'today',
+    defaultDate: defaults.date,
+    disableMobile: true,
+    onChange: updateSchedPill
+  });
+
+  schedTimePicker = flatpickr('#schedTime', {
+    enableTime: true,
+    noCalendar: true,
+    dateFormat: 'h:i K',
+    time_24hr: false,
+    defaultDate: defaults.time,
+    minuteIncrement: 5,
+    disableMobile: true,
+    onChange: updateSchedPill
+  });
+
+  updateSchedPill();
 }
 
 function updateSchedPill() {
@@ -676,7 +821,7 @@ function updateSchedPill() {
   var tz   = document.getElementById('schedTz').value;
   var pill = document.getElementById('schedPill');
   if (!date || !time) { pill.textContent = '📅 Pick a date and time above'; return; }
-  var d = new Date(date + 'T' + time);
+  var d = new Date(date + 'T' + timeTo24Hour(time));
   var opts = { weekday:'short', year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZone: tz };
   try {
     var formatted = d.toLocaleString('en-IN', opts);
@@ -698,31 +843,142 @@ function updateSchedPill() {
 
 // ── EMAIL CHIP INPUTS ──
 var toEmails = [], ccEmails = [];
-setupEmailInput('toEmailInput', 'toChips', toEmails);
-setupEmailInput('ccEmailInput', 'ccChips', ccEmails);
 
-function setupEmailInput(inputId, chipsId, store) {
+// Dummy email list for suggestions (can be replaced with API call in future)
+var DUMMY_EMAILS = [
+  'rahul.kumar@customerinsights.ai',
+  'vedant.pani@customerinsights.ai',
+  'spurthi.ravikanti@customerinsights.ai',
+  'vivek.gupta@customerinsights.ai'
+];
+
+setupEmailInput('toEmailInput', 'toChips', 'toSuggestions', toEmails);
+setupEmailInput('ccEmailInput', 'ccChips', 'ccSuggestions', ccEmails);
+
+function setupEmailInput(inputId, chipsId, suggestionsId, store) {
   var input = document.getElementById(inputId);
   var chips = document.getElementById(chipsId);
+  var suggestionsBox = document.getElementById(suggestionsId);
+  var selectedIndex = -1;
+  var isClickingSuggestion = false;
+  
+  // Show suggestions on input
+  input.addEventListener('input', function(e) {
+    var query = input.value.trim();
+    if (!query) {
+      suggestionsBox.classList.remove('show');
+      selectedIndex = -1;
+      return;
+    }
+    
+    var filtered = DUMMY_EMAILS.filter(function(email) {
+      return email.toLowerCase().includes(query.toLowerCase()) && !store.includes(email);
+    });
+    
+    if (filtered.length === 0) {
+      suggestionsBox.classList.remove('show');
+      selectedIndex = -1;
+      return;
+    }
+    
+    suggestionsBox.innerHTML = '';
+    filtered.forEach(function(email, idx) {
+      var item = document.createElement('div');
+      item.className = 'email-suggestion';
+      item.textContent = email;
+      item.dataset.email = email;
+      suggestionsBox.appendChild(item);
+    });
+    
+    suggestionsBox.classList.add('show');
+    selectedIndex = -1;
+  });
+  
+  // Event delegation for suggestion clicks
+  suggestionsBox.addEventListener('click', function(e) {
+    if (e.target.classList.contains('email-suggestion')) {
+      isClickingSuggestion = true;
+      var email = e.target.dataset.email;
+      addEmailFromSuggestion(email);
+      setTimeout(function() { isClickingSuggestion = false; }, 50);
+    }
+  });
+  
+  // Handle keyboard navigation
   input.addEventListener('keydown', function(e) {
-    if (e.key !== 'Enter' && e.key !== ',') return;
-    e.preventDefault();
+    var items = suggestionsBox.querySelectorAll('.email-suggestion');
+    
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+      updateActiveItem(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex = Math.max(selectedIndex - 1, -1);
+      updateActiveItem(items);
+    } else if (e.key === 'Enter') {
+      if (suggestionsBox.classList.contains('show') && selectedIndex >= 0) {
+        e.preventDefault();
+        items[selectedIndex].click();
+      } else {
+        handleEmailAdd();
+      }
+    } else if (e.key === ',') {
+      e.preventDefault();
+      handleEmailAdd();
+    }
+  });
+  
+  // Close suggestions on blur
+  input.addEventListener('blur', function() {
+    if (!isClickingSuggestion) {
+      setTimeout(function() {
+        suggestionsBox.classList.remove('show');
+        selectedIndex = -1;
+      }, 150);
+    }
+  });
+  
+  function updateActiveItem(items) {
+    items.forEach(function(item, idx) {
+      if (idx === selectedIndex) {
+        item.classList.add('active');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+  
+  function addEmailFromSuggestion(email) {
+    store.push(email);
+    var chip = createEmailChip(email);
+    chips.appendChild(chip);
+    input.value = '';
+    suggestionsBox.classList.remove('show');
+    selectedIndex = -1;
+  }
+  
+  function handleEmailAdd() {
     var email = input.value.trim().replace(',','');
     if (!email) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Invalid email', true); return; }
-    if (store.includes(email)) { input.value = ''; return; }
-    store.push(email);
+    if (store.includes(email)) { input.value = ''; suggestionsBox.classList.remove('show'); return; }
+    addEmailFromSuggestion(email);
+  }
+  
+  function createEmailChip(email) {
     var chip = document.createElement('div');
     chip.className = 'email-chip';
     chip.innerHTML = '<span>' + email + '</span><button type="button">✕</button>';
-    chip.querySelector('button').onclick = function() {
+    chip.querySelector('button').onclick = function(e) {
+      e.preventDefault();
       chip.remove();
       var idx = store.indexOf(email);
       if (idx > -1) store.splice(idx, 1);
     };
-    chips.appendChild(chip);
-    input.value = '';
-  });
+    return chip;
+  }
 }
 
 // ── SEND OR SCHEDULE ──
@@ -733,11 +989,9 @@ function handleSendOrSchedule() {
 }
 
 async function sendEmail() {
-  var canvas = document.getElementById('outCanvas');
-  if (!canvas.width) { toast('Generate card first', true); return; }
   if (!toEmails.length) { toast('Enter recipient email', true); return; }
   try {
-    toast('Uploading image...');
+    var canvas = document.getElementById('outCanvas');
     var payload = await buildPayload();
     toast('Sending...');
     var res = await fetch(SEND_URL, {
@@ -753,13 +1007,12 @@ async function sendEmail() {
 }
 
 async function scheduleEmail() {
-  var canvas = document.getElementById('outCanvas');
-  if (!canvas.width) { toast('Generate card first', true); return; }
   if (!toEmails.length) { toast('Enter recipient email', true); return; }
   var date = document.getElementById('schedDate').value;
   var time = document.getElementById('schedTime').value;
   var tz   = document.getElementById('schedTz').value;
   if (!date || !time) { toast('Pick a date and time', true); return; }
+  var time24 = timeTo24Hour(time);
 
   var tzOffsets = {
     'Asia/Kolkata':        '+05:30',
@@ -772,7 +1025,7 @@ async function scheduleEmail() {
     'UTC':                 '+00:00'
     };
     var offset = tzOffsets[tz] || '+00:00';
-    var sendAt = new Date(date + 'T' + time + ':00' + offset);
+    var sendAt = new Date(date + 'T' + time24 + ':00' + offset);
   if (sendAt <= new Date()) { toast('Scheduled time is in the past', true); return; }
 
   try {
@@ -977,6 +1230,12 @@ function resetAll() {
   document.getElementById('liveWrap').style.display='none';
   document.getElementById('schedSwitch').checked = false;
   document.getElementById('schedBody').classList.remove('open');
+  var defaults = currentScheduleDefaults();
+  if (schedDatePicker) schedDatePicker.setDate(defaults.date, false);
+  else document.getElementById('schedDate').value = defaults.date;
+  if (schedTimePicker) schedTimePicker.setDate(defaults.time, false);
+  else document.getElementById('schedTime').value = timeTo24Hour(defaults.time);
+  updateSchedPill();
   document.getElementById('sendBtn').textContent = '✉ Send Email';
   document.getElementById('sendBtn').disabled = true;
   document.getElementById('sendBtn').style.opacity = '0.4';
@@ -985,6 +1244,7 @@ function resetAll() {
 }
 
 // ── INIT ──
+initSchedulePickers();
 applyDefaults();
 loadQueueFromSheet();
 loadDefaultTemplate('assets/birthday.png');
