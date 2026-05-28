@@ -331,7 +331,7 @@ hr.div { border: none; border-top: 1px solid var(--border); margin: 0.85rem 0; }
     <div class="fields-grid" id="fieldsGrid">
       <div class="field" id="fld-name">
         <label>Full Name</label>
-        <input type="text" id="inp-name" placeholder="e.g. Rahul Kumar" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase(); schedLive()">
+        <input type="text" id="inp-name" placeholder="e.g. Rahul Kumar" oninput="schedLive()">
       </div>
       <div class="field" id="fld-dob">
         <label>Date of Birth</label>
@@ -520,8 +520,12 @@ function toast(msg, isErr) {
 }
 function sv(id, val) { document.getElementById(id).textContent = val; }
 function gv(id) { return parseFloat(document.getElementById(id).value) || 0; }
-function upperName() {
-  return (document.getElementById('inp-name').value || '').trim().toUpperCase();
+function enteredName() {
+  return (document.getElementById('inp-name').value || '').trim();
+}
+function displayName() {
+  var name = enteredName();
+  return cardType === 'anniversary' ? name.toUpperCase() : name;
 }
 function readFile(file, cb) {
   var r = new FileReader();
@@ -641,7 +645,7 @@ function renderToCtx(ctx, W, H, scale) {
       ctx.drawImage(photoImg, dx, dy, dw, dh);
       ctx.restore();
     }
-    var name  = upperName();
+    var name  = displayName();
     var dob   = (document.getElementById('inp-dob').value   || '').trim();
     var years = (document.getElementById('inp-years').value || '').trim();
     var nc = document.getElementById('nameColor').value;
@@ -716,7 +720,7 @@ function roundRect(ctx, x, y, w, h, r) {
 
 function downloadCard() {
   var cv = document.getElementById('outCanvas');
-  var name = (upperName() || cardType.toUpperCase()) + '_card.png';
+  var name = (displayName() || cardType.toUpperCase()) + '_card.png';
   var a = document.createElement('a');
   a.download = name.replace(/\s+/g,'_'); a.href = cv.toDataURL('image/png');
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
@@ -1078,8 +1082,8 @@ async function buildPayload() {
     to:          toEmails.join(','),
     cc:          ccEmails.join(','),
     subject:     cardType === 'birthday'
-                   ? 'Happy Birthday ' + upperName()
-                   : 'Happy Work Anniversary ' + upperName(),
+                   ? 'Happy Birthday ' + enteredName()
+                   : 'Happy Work Anniversary ' + enteredName(),
     imageUrl:    imageUrl
   };
 }
